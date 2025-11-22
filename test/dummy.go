@@ -14,7 +14,7 @@ func main() {
 	var err error
 	startPort := 8081
 
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		addr := fmt.Sprintf(":%d", startPort+i)
 		listener, err = net.Listen("tcp", addr)
 		if err == nil {
