@@ -1,0 +1,13 @@
+proxy:
+  host: "localhost"
+  port: "8080"
+  targets:
+    - "http://localhost:8081"
+    - "http://localhost:8082"
+    - "http://localhost:8083"
+    - "http://localhost:8084"
+
+cache:
+  enabled: true
+  default_ttl: 5m
+  purge_interval: 10m

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Lucascluz/reverse/internal/cache"
+	"github.com/Lucascluz/reverse/internal/config"
 )
 
 type Proxy struct {
@@ -18,7 +19,8 @@ type Proxy struct {
 	cache cache.Cache
 }
 
-func NewProxy() *Proxy {
+func NewProxy(cfg *config.Config) *Proxy {
+
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
@@ -32,9 +34,10 @@ func NewProxy() *Proxy {
 		ExpectContinueTimeout: 1 * time.Second,
 	}
 
+	// TODO: Implement configuration options for cache and targets
 	return &Proxy{
-		targets: []string{"http://localhost:8081", "http://localhost:8082"},
-		cache:   cache.NewMemoryCache(),
+		targets: cfg.Proxy.Targets,
+		cache:   cache.NewMemoryCache(&cfg.Cache),
 		// Initialize the client with the custom transport
 		client: &http.Client{
 			Transport: transport,

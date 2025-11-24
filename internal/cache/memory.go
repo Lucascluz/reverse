@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/Lucascluz/reverse/internal/config"
 )
 
 type memoryCache struct {
@@ -14,7 +16,7 @@ type memoryCache struct {
 	stop    chan struct{}    // Channel to stop the ticker
 }
 
-func NewMemoryCache() *memoryCache {
+func NewMemoryCache(config *config.CacheConfig) *memoryCache {
 
 	ticker := time.NewTicker(time.Minute)
 	stop := make(chan struct{})

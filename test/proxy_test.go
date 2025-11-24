@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Lucascluz/reverse/internal/cache"
+	"github.com/Lucascluz/reverse/internal/config"
 )
 
 // TestProxyBasicFunctionality tests basic proxy request forwarding
@@ -334,7 +335,11 @@ func createTestProxy(backends []string) *testProxy {
 				return http.ErrUseLastResponse
 			},
 		},
-		cache: cache.NewMemoryCache(),
+		cache: cache.NewMemoryCache(&config.CacheConfig{
+			Enabled:       true,
+			DefaultTTL:    5 * time.Minute,
+			PurgeInterval: 10 * time.Minute,
+		}),
 	}
 }
 

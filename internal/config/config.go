@@ -8,12 +8,13 @@ type Config struct {
 }
 
 type ProxyConfig struct {
-	Host    string
-	Port    string
-	Targets []string
+	Host    string   `yaml:"host"`
+	Port    string   `yaml:"port"`
+	Targets []string `yaml:"targets"`
 }
 
 type CacheConfig struct {
-	DefaultTTL    time.Duration
-	PurgeInterval time.Duration
+	Enabled       bool          `yaml:"enabled"`
+	DefaultTTL    time.Duration `yaml:"default_ttl"`
+	PurgeInterval time.Duration `yaml:"purge_interval"`
 }
