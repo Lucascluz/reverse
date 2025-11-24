@@ -7,20 +7,27 @@ import (
 )
 
 type memoryCache struct {
-	mu    sync.RWMutex
-	items map[string]Entry
-
-	// TODO: Implement ticker to trigger async cache operations
+	mu     sync.RWMutex
+	items  map[string]Entry // Map to store cached entries
+	ticker *time.Ticker     // Ticker used to periodically purge expired entries
+	stop   chan struct{}    // Channel to stop the ticker
 }
 
 func NewMemoryCache() *memoryCache {
 
-	// TODO: Start ticker
+	ticker := time.NewTicker(time.Minute)
+	stop := make(chan struct{})
 
-	return &memoryCache{
-		mu:    sync.RWMutex{},
-		items: make(map[string]Entry),
+	mc := &memoryCache{
+		mu:     sync.RWMutex{},
+		items:  make(map[string]Entry),
+		ticker: ticker,
+		stop:   stop,
 	}
+
+	go mc.initPurgeTicker(ticker, stop)
+
+	return mc
 }
 
 func (m *memoryCache) Get(key string) ([]byte, http.Header, bool) {
@@ -66,9 +73,18 @@ func (m *memoryCache) Set(key string, body []byte, headers http.Header, ttl time
 	m.mu.Lock()
 	m.items[key] = entry
 	m.mu.Unlock()
+}
 
-	// Lazy purge expired entries
-	go m.purgeExpired()
+func (m *memoryCache) initPurgeTicker(ticker *time.Ticker, stop chan struct{}) {
+	for {
+		select {
+		case <-ticker.C:
+			m.purgeExpired()
+		case <-stop:
+			ticker.Stop()
+			return
+		}
+	}
 }
 
 func (m *memoryCache) purgeExpired() {

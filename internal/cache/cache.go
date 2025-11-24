@@ -7,25 +7,17 @@ import (
 
 type Cache interface {
 	Get(key string) ([]byte, http.Header, bool)
-	Set(key string, body []byte, headers http.Header, expires int64)
+	Set(key string, body []byte, headers http.Header, expires time.Time)
 }
 
 type Entry struct {
 	body    []byte
 	headers http.Header
-	expires time.Duration
-}
-
-func NewEntry(key string, body []byte, headers http.Header, expires time.Duration) *Entry {
-	return &Entry{
-		body:    body,
-		headers: headers,
-		expires: expires,
-	}
+	expires time.Time
 }
 
 func (e *Entry) expired() bool {
-	return time.Now().After(time.Now().Add(e.expires))
+	return time.Now().After(e.expires)
 }
 
 func cloneHeaders(headers http.Header) http.Header {
