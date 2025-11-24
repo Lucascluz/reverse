@@ -1,12 +1,11 @@
 package proxy
 
 import (
+	"bytes"
 	"io"
 	"math/rand/v2"
 	"net/http"
 	"strings"
-
-	"github.com/Lucascluz/reverse/internal/cache"
 )
 
 var hopHeaders = []string{
@@ -20,21 +19,20 @@ var hopHeaders = []string{
 	"Upgrade",
 }
 
-type Proxy struct {
-
-	// TODO: Implement proper target management
-	targets []string
-
-	client *http.Client
-
-	cache *cache.Cache
-}
-
 // Implement http.Handler interface directly
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: Implement proper load balancing strategy
 	nextTarget := p.targets[rand.IntN(len(p.targets))]
+
+	if p.cache != nil {
+		if cached, _, ok := p.cache.Get(nextTarget + r.URL.Path); ok {
+			w.Header().Set("X-Cache", "HIT")
+			w.WriteHeader(http.StatusOK)
+			io.Copy(w, bytes.NewReader(cached))
+			return
+		}
+	}
 
 	outReq, err := http.NewRequest(r.Method, nextTarget+r.URL.Path, r.Body)
 	if err != nil {

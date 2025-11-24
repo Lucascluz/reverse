@@ -8,6 +8,7 @@ import (
 type Cache interface {
 	Get(key string) ([]byte, http.Header, bool)
 	Set(key string, body []byte, headers http.Header, expires time.Time)
+	isEnabled() bool
 }
 
 type Entry struct {
@@ -16,7 +17,7 @@ type Entry struct {
 	expires time.Time
 }
 
-func (e *Entry) expired() bool {
+func (e *Entry) isExpired() bool {
 	return time.Now().After(e.expires)
 }
 

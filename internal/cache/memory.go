@@ -7,10 +7,11 @@ import (
 )
 
 type memoryCache struct {
-	mu     sync.RWMutex
-	items  map[string]Entry // Map to store cached entries
-	ticker *time.Ticker     // Ticker used to periodically purge expired entries
-	stop   chan struct{}    // Channel to stop the ticker
+	mu      sync.RWMutex
+	enabled bool
+	items   map[string]Entry // Map to store cached entries
+	ticker  *time.Ticker     // Ticker used to periodically purge expired entries
+	stop    chan struct{}    // Channel to stop the ticker
 }
 
 func NewMemoryCache() *memoryCache {
@@ -41,7 +42,7 @@ func (m *memoryCache) Get(key string) ([]byte, http.Header, bool) {
 	}
 
 	// Check if entry expired
-	if e.expired() {
+	if e.isExpired() {
 		m.mu.Lock()
 		delete(m.items, key)
 		m.mu.Unlock()
@@ -54,11 +55,9 @@ func (m *memoryCache) Get(key string) ([]byte, http.Header, bool) {
 	return bodyCopy, headersCopy, true
 }
 
-func (m *memoryCache) Set(key string, body []byte, headers http.Header, ttl time.Duration) {
+func (m *memoryCache) Set(key string, body []byte, headers http.Header, expires time.Time) {
 
-	exp := time.Now().Add(ttl)
-
-	if time.Now().After(exp) {
+	if time.Now().After(expires) {
 		return
 	}
 
@@ -67,12 +66,16 @@ func (m *memoryCache) Set(key string, body []byte, headers http.Header, ttl time
 	entry := Entry{
 		body:    body,
 		headers: filtered,
-		expires: exp,
+		expires: expires,
 	}
 
 	m.mu.Lock()
 	m.items[key] = entry
 	m.mu.Unlock()
+}
+
+func (m *memoryCache) isEnabled() bool {
+	return m.enabled
 }
 
 func (m *memoryCache) initPurgeTicker(ticker *time.Ticker, stop chan struct{}) {
@@ -92,7 +95,7 @@ func (m *memoryCache) purgeExpired() {
 	defer m.mu.Unlock()
 
 	for key, entry := range m.items {
-		if entry.expired() {
+		if entry.isExpired() {
 			delete(m.items, key)
 		}
 	}
