@@ -3,8 +3,8 @@ package config
 import "time"
 
 type Config struct {
-	Proxy ProxyConfig
-	Cache CacheConfig
+	Proxy ProxyConfig `yaml:"proxy"`
+	Cache CacheConfig `yaml:"cache"`
 }
 
 type ProxyConfig struct {
@@ -15,6 +15,5 @@ type ProxyConfig struct {
 
 type CacheConfig struct {
 	Enabled       bool          `yaml:"enabled"`
-	DefaultTTL    time.Duration `yaml:"default_ttl"`
 	PurgeInterval time.Duration `yaml:"purge_interval"`
 }

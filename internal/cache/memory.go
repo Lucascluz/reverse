@@ -16,16 +16,17 @@ type memoryCache struct {
 	stop    chan struct{}    // Channel to stop the ticker
 }
 
-func NewMemoryCache(config *config.CacheConfig) *memoryCache {
+func NewMemoryCache(config config.CacheConfig) *memoryCache {
 
-	ticker := time.NewTicker(time.Minute)
+	ticker := time.NewTicker(config.PurgeInterval)
 	stop := make(chan struct{})
 
 	mc := &memoryCache{
-		mu:     sync.RWMutex{},
-		items:  make(map[string]Entry),
-		ticker: ticker,
-		stop:   stop,
+		mu:      sync.RWMutex{},
+		enabled: config.Enabled,
+		items:   make(map[string]Entry),
+		ticker:  ticker,
+		stop:    stop,
 	}
 
 	go mc.initPurgeTicker(ticker, stop)

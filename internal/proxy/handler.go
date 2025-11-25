@@ -25,7 +25,9 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// TODO: Implement proper load balancing strategy
 	nextTarget := p.targets[rand.IntN(len(p.targets))]
 
+	// If cache is enabled, check if the requested resource is cached
 	if p.cache != nil {
+
 		if cached, _, ok := p.cache.Get(nextTarget + r.URL.Path); ok {
 			w.Header().Set("X-Cache", "HIT")
 			w.WriteHeader(http.StatusOK)

@@ -37,7 +37,7 @@ func NewProxy(cfg *config.Config) *Proxy {
 	// TODO: Implement configuration options for cache and targets
 	return &Proxy{
 		targets: cfg.Proxy.Targets,
-		cache:   cache.NewMemoryCache(&cfg.Cache),
+		cache:   cache.NewMemoryCache(cfg.Cache),
 		// Initialize the client with the custom transport
 		client: &http.Client{
 			Transport: transport,
