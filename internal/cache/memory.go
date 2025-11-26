@@ -9,11 +9,12 @@ import (
 )
 
 type memoryCache struct {
-	mu      sync.RWMutex
-	enabled bool
-	items   map[string]Entry // Map to store cached entries
-	ticker  *time.Ticker     // Ticker used to periodically purge expired entries
-	stop    chan struct{}    // Channel to stop the ticker
+	mu         sync.RWMutex
+	disabled   bool
+	items      map[string]Entry // Map to store cached entries
+	ticker     *time.Ticker     // Ticker used to periodically purge expired entries
+	defaultTTL time.Duration    // Default time-to-live for cached entries
+	stop       chan struct{}    // Channel to stop the ticker
 }
 
 func NewMemoryCache(config config.CacheConfig) *memoryCache {
@@ -22,11 +23,12 @@ func NewMemoryCache(config config.CacheConfig) *memoryCache {
 	stop := make(chan struct{})
 
 	mc := &memoryCache{
-		mu:      sync.RWMutex{},
-		enabled: config.Enabled,
-		items:   make(map[string]Entry),
-		ticker:  ticker,
-		stop:    stop,
+		mu:         sync.RWMutex{},
+		disabled:   config.Disabled,
+		items:      make(map[string]Entry),
+		ticker:     ticker,
+		defaultTTL: config.DefaultTTL,
+		stop:       stop,
 	}
 
 	go mc.initPurgeTicker(ticker, stop)
@@ -77,8 +79,12 @@ func (m *memoryCache) Set(key string, body []byte, headers http.Header, expires 
 	m.mu.Unlock()
 }
 
-func (m *memoryCache) isEnabled() bool {
-	return m.enabled
+func (mc *memoryCache) IsEnabled() bool {
+	return !mc.disabled
+}
+
+func (mc *memoryCache) GetDefaultTTL() time.Duration {
+	return mc.defaultTTL
 }
 
 func (m *memoryCache) initPurgeTicker(ticker *time.Ticker, stop chan struct{}) {

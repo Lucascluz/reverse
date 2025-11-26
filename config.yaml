@@ -8,6 +8,6 @@ proxy:
     - "http://localhost:8084"
 
 cache:
-  enabled: true
+  disabled: false
   default_ttl: 5m
   purge_interval: 10m
