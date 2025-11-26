@@ -65,7 +65,7 @@ func TestApplyDefaults(t *testing.T) {
 				if cfg.Proxy.Host != "0.0.0.0" {
 					t.Errorf("Expected host 0.0.0.0, got %s", cfg.Proxy.Host)
 				}
-				if cfg.Cache.Disabled != false {
+				if cfg.Cache.Disabled != true {
 					t.Error("Expected cache to be disabled")
 				}
 				if cfg.Cache.DefaultTTL != 10*time.Minute {
