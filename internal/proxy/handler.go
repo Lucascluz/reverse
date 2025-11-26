@@ -26,11 +26,13 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// TODO: Implement proper load balancing strategy
 	nextTarget := p.targets[rand.IntN(len(p.targets))]
 
+	cacheKey := r.Method + ":" + nextTarget + r.URL.RequestURI()
+
 	// If cache is enabled, check if the requested resource is cached
 	if p.cache != nil {
 
 		// Serve cached response
-		if cached, headers, ok := p.cache.Get(nextTarget + r.URL.Path); ok {
+		if cached, headers, ok := p.cache.Get(cacheKey); ok {
 			copyHeader(w.Header(), headers)
 			w.Header().Set("X-Cache", "HIT")
 			w.WriteHeader(http.StatusOK)
@@ -72,15 +74,10 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	cachable := p.cache != nil && isCachable(r.Method, resp.StatusCode, resp.Header)
 
 	if cachable {
-		cacheKey := r.Method + ":" + nextTarget + r.URL.RequestURI()
-
 		// Determine TTL for cache entry
-		var expires time.Time
 		ttl := p.determineTTL(resp.Header)
-		if ttl > 0 {
-			expires = time.Now().Add(ttl)
-		}
-
+		expires := time.Now().Add(ttl)
+		
 		// Store cache entry
 		p.cache.Set(cacheKey, body, resp.Header, expires)
 	}
@@ -117,33 +114,43 @@ func isCachable(method string, status int, headers http.Header) bool {
 }
 
 func (p *Proxy) determineTTL(headers http.Header) time.Duration {
+	var ttl time.Duration
+	maxAge := p.cache.GetMaxAge()
 
 	// Check Cache-Control: max-age
 	if cc := headers.Get("Cache-Control"); cc != "" {
-		if maxAge := parseMaxAge(cc); maxAge > 0 {
-			return maxAge
+		if parsed := parseMaxAge(cc); parsed > 0 {
+			ttl = parsed
 		}
 	}
 
-	// Check for Expires headers
-	if expires := headers.Get("Expires"); expires != "" {
-		if expireTime, err := http.ParseTime(expires); err == nil {
-			ttl := time.Until(expireTime)
-			if ttl > 0 {
-				return ttl
+	// Check for Expires header if no max-age found
+	if ttl == 0 {
+		if expires := headers.Get("Expires"); expires != "" {
+			if expireTime, err := http.ParseTime(expires); err == nil {
+				ttl = time.Until(expireTime)
 			}
 		}
 	}
 
-	// Use default TTL
-	return p.cache.GetDefaultTTL()
+	// Use default TTL if no cache headers or negative/zero TTL
+	if ttl <= 0 {
+		return p.cache.GetDefaultTTL()
+	}
+
+	// Cap at MaxAge to prevent excessive caching
+	if ttl > maxAge {
+		return maxAge
+	}
+
+	return ttl
 }
 
 func parseMaxAge(cacheControl string) time.Duration {
-	for _, directive := range strings.Split(cacheControl, ",") {
+	for directive := range strings.SplitSeq(cacheControl, ",") {
 		directive = strings.TrimSpace(directive)
-		if strings.HasPrefix(directive, "max-age=") {
-			if seconds, err := strconv.Atoi(strings.TrimPrefix(directive, "max-age=")); err == nil && seconds > 0 {
+		if after, found := strings.CutPrefix(directive, "max-age="); found {
+			if seconds, err := strconv.Atoi(after); err == nil && seconds > 0 {
 				return time.Duration(seconds) * time.Second
 			}
 		}
