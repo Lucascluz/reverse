@@ -22,5 +22,10 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("invalid syntax at proxy config: %w", err)
 	}
 
+	err = config.applyDefaults()
+	if err != nil {
+		return nil, fmt.Errorf("config validation failed: %w", err)
+	}
+
 	return config, nil
 }
