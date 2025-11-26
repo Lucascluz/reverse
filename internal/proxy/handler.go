@@ -1,11 +1,12 @@
 package proxy
 
 import (
-	"bytes"
 	"io"
 	"math/rand/v2"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 )
 
 var hopHeaders = []string{
@@ -28,10 +29,12 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// If cache is enabled, check if the requested resource is cached
 	if p.cache != nil {
 
-		if cached, _, ok := p.cache.Get(nextTarget + r.URL.Path); ok {
+		// Serve cached response
+		if cached, headers, ok := p.cache.Get(nextTarget + r.URL.Path); ok {
+			copyHeader(w.Header(), headers)
 			w.Header().Set("X-Cache", "HIT")
 			w.WriteHeader(http.StatusOK)
-			io.Copy(w, bytes.NewReader(cached))
+			w.Write(cached)
 			return
 		}
 	}
@@ -42,10 +45,9 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 1. Copy headers but STRIP hop-by-hop headers
+	// Copy headers but STRIP hop-by-hop headers
 	copyHeader(outReq.Header, r.Header)
 
-	// 2. Use YOUR client, not DefaultClient
 	resp, err := p.client.Do(outReq)
 	if err != nil {
 		http.Error(w, "Bad Gateway", http.StatusBadGateway)
@@ -53,11 +55,100 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	// 3. Copy response headers (stripping hop-by-hop again)
+	// Read response body (needed for caching)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "Error reading backend response", http.StatusBadGateway)
+		return
+	}
+
+	// Copy response headers (stripping hop-by-hop again)
 	copyHeader(w.Header(), resp.Header)
 
 	w.WriteHeader(resp.StatusCode)
-	io.Copy(w, resp.Body)
+	w.Write(body)
+
+	// Determine if should cache the response body
+	cachable := p.cache != nil && isCachable(r.Method, resp.StatusCode, resp.Header)
+
+	if cachable {
+		cacheKey := r.Method + ":" + nextTarget + r.URL.RequestURI()
+
+		// Determine TTL for cache entry
+		var expires time.Time
+		ttl := p.determineTTL(resp.Header)
+		if ttl > 0 {
+			expires = time.Now().Add(ttl)
+		}
+
+		// Store cache entry
+		p.cache.Set(cacheKey, body, resp.Header, expires)
+	}
+}
+
+func isCachable(method string, status int, headers http.Header) bool {
+
+	// Only cache GET and HEAD requests
+	if method != "GET" && method != "HEAD" {
+		return false
+	}
+
+	// Only cache sucess responses
+	if status < 200 || status > 206 {
+		return false
+	}
+
+	// Check for cache control diretives
+	if cc := headers.Get("Cache-Control"); cc != "" {
+		cc = strings.ToLower(cc)
+
+		// Only cache allowed responses
+		if strings.Contains(cc, "no-store") || strings.Contains(cc, "private") {
+			return false
+		}
+	}
+
+	// Don't cache responses with Set-Cookie
+	if headers.Get("Set-Cookie") != "" {
+		return false
+	}
+
+	return true
+}
+
+func (p *Proxy) determineTTL(headers http.Header) time.Duration {
+
+	// Check Cache-Control: max-age
+	if cc := headers.Get("Cache-Control"); cc != "" {
+		if maxAge := parseMaxAge(cc); maxAge > 0 {
+			return maxAge
+		}
+	}
+
+	// Check for Expires headers
+	if expires := headers.Get("Expires"); expires != "" {
+		if expireTime, err := http.ParseTime(expires); err == nil {
+			ttl := time.Until(expireTime)
+			if ttl > 0 {
+				return ttl
+			}
+		}
+	}
+
+	// Use default TTL
+	return p.cache.GetDefaultTTL()
+}
+
+func parseMaxAge(cacheControl string) time.Duration {
+	for _, directive := range strings.Split(cacheControl, ",") {
+		directive = strings.TrimSpace(directive)
+		if strings.HasPrefix(directive, "max-age=") {
+			if seconds, err := strconv.Atoi(strings.TrimPrefix(directive, "max-age=")); err == nil && seconds > 0 {
+				return time.Duration(seconds) * time.Second
+			}
+		}
+	}
+	return 0
 }
 
 // Helper to copy headers while skipping hop-by-hop ones
