@@ -14,6 +14,7 @@ type memoryCache struct {
 	items      map[string]Entry // Map to store cached entries
 	ticker     *time.Ticker     // Ticker used to periodically purge expired entries
 	defaultTTL time.Duration    // Default time-to-live for cached entries
+	maxAge     time.Duration    // Maximum age for cached entries
 	stop       chan struct{}    // Channel to stop the ticker
 }
 
@@ -28,6 +29,7 @@ func NewMemoryCache(config config.CacheConfig) *memoryCache {
 		items:      make(map[string]Entry),
 		ticker:     ticker,
 		defaultTTL: config.DefaultTTL,
+		maxAge:     config.MaxAge,
 		stop:       stop,
 	}
 
@@ -79,12 +81,12 @@ func (m *memoryCache) Set(key string, body []byte, headers http.Header, expires 
 	m.mu.Unlock()
 }
 
-func (mc *memoryCache) IsEnabled() bool {
-	return !mc.disabled
+func (m *memoryCache) GetDefaultTTL() time.Duration {
+	return m.defaultTTL
 }
 
-func (mc *memoryCache) GetDefaultTTL() time.Duration {
-	return mc.defaultTTL
+func (m *memoryCache) GetMaxAge() time.Duration {
+	return m.maxAge
 }
 
 func (m *memoryCache) initPurgeTicker(ticker *time.Ticker, stop chan struct{}) {

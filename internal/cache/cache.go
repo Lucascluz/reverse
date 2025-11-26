@@ -8,8 +8,8 @@ import (
 type Cache interface {
 	Get(key string) ([]byte, http.Header, bool)
 	Set(key string, body []byte, headers http.Header, expires time.Time)
-	IsEnabled() bool
 	GetDefaultTTL() time.Duration
+	GetMaxAge() time.Duration
 }
 
 type Entry struct {
