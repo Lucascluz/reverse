@@ -23,11 +23,19 @@ type CacheConfig struct {
 }
 
 type PoolConfig struct {
-	Backends []BackendConfig `yaml:"backends"`
+	Backends      []BackendConfig     `yaml:"backends"`
+	HealthChecker HealthCheckerConfig `yaml:"health_checker"`
 }
 
 type BackendConfig struct {
-	Url      string `yaml:"url"`
-	Weight   int    `yaml:"weight"`
-	MaxConns int    `yaml:"max_conns"`
+	Name      string `yaml:"name"`
+	Url       string `yaml:"url"`
+	HealthUrl string `yaml:"health_url"`
+	Weight    int    `yaml:"weight"`
+	MaxConns  int    `yaml:"max_conns"`
+}
+
+type HealthCheckerConfig struct {
+	Interval time.Duration `yaml:"interval"`
+	Timeout  time.Duration `yaml:"timeout"`
 }

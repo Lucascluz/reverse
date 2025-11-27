@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -15,6 +16,10 @@ const (
 
 	DefaultWeight   = 1
 	DefaultMaxConns = 100
+
+	DefaultName     = "backend"
+	DefaultTimeout  = 5 * time.Second
+	DefaultInterval = 10 * time.Second
 )
 
 func (c *Config) applyDefaults() error {
@@ -55,13 +60,35 @@ func (c *Config) applyDefaults() error {
 
 	// Apply defaults for backend config
 	for i, backend := range c.Pool.Backends {
+
+		if backend.Name == "" {
+			backend.Name = DefaultName + strconv.Itoa(i)
+		}
+
+		if backend.Url == "" {
+			return fmt.Errorf("%s missing URL", backend.Name)
+		}
+
+		if backend.HealthUrl == "" {
+			backend.HealthUrl = backend.Url + "/health"
+		}
+
 		if backend.Weight == 0 {
-			c.Pool.Backends[i].Weight = DefaultWeight
+			backend.Weight = DefaultWeight
 		}
 
 		if backend.MaxConns == 0 {
-			c.Pool.Backends[i].MaxConns = DefaultMaxConns
+			backend.MaxConns = DefaultMaxConns
 		}
+	}
+
+	// Apply defaults for health checker config
+	if c.Pool.HealthChecker.Interval == 0 {
+		c.Pool.HealthChecker.Interval = DefaultInterval
+	}
+
+	if c.Pool.HealthChecker.Timeout == 0 {
+		c.Pool.HealthChecker.Timeout = DefaultTimeout
 	}
 
 	return nil

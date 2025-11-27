@@ -90,7 +90,7 @@ func isCachable(method string, status int, headers http.Header) bool {
 	}
 
 	// Only cache sucess responses
-	if status < 200 || status > 206 {
+	if status < 200 || status >= 300 {
 		return false
 	}
 

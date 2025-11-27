@@ -12,10 +12,11 @@ type memoryCache struct {
 	mu         sync.RWMutex
 	disabled   bool
 	items      map[string]Entry // Map to store cached entries
-	ticker     *time.Ticker     // Ticker used to periodically purge expired entries
 	defaultTTL time.Duration    // Default time-to-live for cached entries
 	maxAge     time.Duration    // Maximum age for cached entries
-	stop       chan struct{}    // Channel to stop the ticker
+
+	ticker *time.Ticker  // Ticker used to periodically purge expired entries
+	stop   chan struct{} // Channel to stop the ticker
 }
 
 func NewMemoryCache(config *config.CacheConfig) *memoryCache {

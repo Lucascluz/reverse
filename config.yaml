@@ -16,26 +16,28 @@ pool:
   #   timeout: 2s            # Health check timeout
   #   unhealthy_threshold: 3 # Failures before marking unhealthy
   #   healthy_threshold: 2   # Successes before marking healthy
-  
+
   # # Load balancing strategy
   # load_balancing:
   #   strategy: "round_robin" # Options: round_robin, least_connections, weighted
   #   timeout: 30s            # Backend request timeout
-  
+
   # List of backend servers
   backends:
     - url: "http://localhost:8081"
-      weight: 1            # Optional: for weighted load balancing
-      max_conns: 100       # Optional: max concurrent connections
-    
+      health_url: "http://localhost:8081/health" # Health check endpoint
+      weight: 1 # Optional: for weighted load balancing
+      max_conns: 100 # Optional: max concurrent connections
+
     - url: "http://localhost:8082"
+      health_url: "/health" # Defaults to /health if not specified
       weight: 1
       max_conns: 100
-    
+
     - url: "http://localhost:8083"
       weight: 1
       max_conns: 100
-    
+
     - url: "http://localhost:8084"
       weight: 1
       max_conns: 100
