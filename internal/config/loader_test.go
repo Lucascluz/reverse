@@ -10,11 +10,16 @@ func TestLoad(t *testing.T) {
 	// Create temp config file
 	content := `
 proxy:
-  targets:
-    - "http://localhost:8081"
+  host: "localhost"
+  port: "8080"
 cache:
   disabled: false
   default_ttl: 5m
+pool:
+  backends:
+    - url: "http://localhost:8081"
+      weight: 1
+      max_conns: 100
 `
 	tmpfile, err := os.CreateTemp("", "config-*.yaml")
 	if err != nil {
@@ -34,8 +39,14 @@ cache:
 	}
 
 	// Verify loaded values
-	if cfg.Proxy.Host != DefaultHost {
-		t.Errorf("Expected default host %s, got %s", DefaultHost, cfg.Proxy.Host)
+	if cfg.Proxy.Host != "localhost" {
+		t.Errorf("Expected host localhost, got %s", cfg.Proxy.Host)
+	}
+	if len(cfg.Pool.Backends) == 0 {
+		t.Error("Expected backends to be loaded")
+	}
+	if cfg.Pool.Backends[0].Url != "http://localhost:8081" {
+		t.Errorf("Expected backend URL http://localhost:8081, got %s", cfg.Pool.Backends[0].Url)
 	}
 }
 

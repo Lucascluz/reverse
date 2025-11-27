@@ -18,7 +18,7 @@ type memoryCache struct {
 	stop       chan struct{}    // Channel to stop the ticker
 }
 
-func NewMemoryCache(config config.CacheConfig) *memoryCache {
+func NewMemoryCache(config *config.CacheConfig) *memoryCache {
 
 	ticker := time.NewTicker(config.PurgeInterval)
 	stop := make(chan struct{})

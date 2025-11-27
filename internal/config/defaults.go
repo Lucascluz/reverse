@@ -6,12 +6,15 @@ import (
 )
 
 const (
-	DefaultHost         = "localhost"
-	DefaultPort         = "8080"
+	DefaultHost = "localhost"
+	DefaultPort = "8080"
 
 	DefaultTTL           = 5 * time.Minute  // Conservative fallback
 	DefaultMaxAge        = 24 * time.Hour   // Reasonable upper bound
 	DefaultPurgeInterval = 10 * time.Minute // Cleanup frequency
+
+	DefaultWeight   = 1
+	DefaultMaxConns = 100
 )
 
 func (c *Config) applyDefaults() error {
@@ -23,11 +26,6 @@ func (c *Config) applyDefaults() error {
 
 	if c.Proxy.Port == "" {
 		c.Proxy.Port = DefaultPort
-	}
-
-	// Validate targets (required)
-	if len(c.Proxy.Targets) == 0 {
-		return fmt.Errorf("at least one target must be configured")
 	}
 
 	// Apply defaults for cache config
@@ -44,6 +42,26 @@ func (c *Config) applyDefaults() error {
 
 	if c.Cache.PurgeInterval == 0 {
 		c.Cache.PurgeInterval = DefaultPurgeInterval
+	}
+
+	// Apply defaults for backend pool config
+	if c.Pool.Backends == nil {
+		return fmt.Errorf("backend pool config is missing")
+	}
+
+	if len(c.Pool.Backends) == 0 {
+		return fmt.Errorf("no backends configured")
+	}
+
+	// Apply defaults for backend config
+	for i, backend := range c.Pool.Backends {
+		if backend.Weight == 0 {
+			c.Pool.Backends[i].Weight = DefaultWeight
+		}
+
+		if backend.MaxConns == 0 {
+			c.Pool.Backends[i].MaxConns = DefaultMaxConns
+		}
 	}
 
 	return nil

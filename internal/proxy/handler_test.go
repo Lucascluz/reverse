@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Lucascluz/reverse/internal/backend"
 	"github.com/Lucascluz/reverse/internal/cache"
 	"github.com/Lucascluz/reverse/internal/config"
 )
@@ -178,7 +179,7 @@ func TestParseMaxAge(t *testing.T) {
 // TestDetermineTTL tests the determineTTL function
 func TestDetermineTTL(t *testing.T) {
 	// Create a mock cache
-	mockCache := cache.NewMemoryCache(config.CacheConfig{
+	mockCache := cache.NewMemoryCache(&config.CacheConfig{
 		Disabled:      false,
 		DefaultTTL:    5 * time.Minute,
 		MaxAge:        1 * time.Hour,
@@ -254,7 +255,7 @@ func TestDetermineTTL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := p.determineTTL(tt.headers)
-			
+
 			// Allow small delta for time-based tests (within 1 second)
 			delta := got - tt.want
 			if delta < 0 {
@@ -302,17 +303,17 @@ func TestIsHopHeader(t *testing.T) {
 // TestCopyHeader tests the copyHeader function
 func TestCopyHeader(t *testing.T) {
 	tests := []struct {
-		name      string
-		src       http.Header
-		wantCopy  map[string][]string
-		wantSkip  []string
+		name     string
+		src      http.Header
+		wantCopy map[string][]string
+		wantSkip []string
 	}{
 		{
 			name: "copy regular headers",
 			src: http.Header{
-				"Content-Type":  []string{"application/json"},
-				"User-Agent":    []string{"test-agent"},
-				"X-Custom":      []string{"custom-value"},
+				"Content-Type": []string{"application/json"},
+				"User-Agent":   []string{"test-agent"},
+				"X-Custom":     []string{"custom-value"},
 			},
 			wantCopy: map[string][]string{
 				"Content-Type": {"application/json"},
@@ -323,10 +324,10 @@ func TestCopyHeader(t *testing.T) {
 		{
 			name: "skip hop-by-hop headers",
 			src: http.Header{
-				"Content-Type":  []string{"text/plain"},
-				"Connection":    []string{"keep-alive"},
-				"Keep-Alive":    []string{"timeout=5"},
-				"Upgrade":       []string{"websocket"},
+				"Content-Type": []string{"text/plain"},
+				"Connection":   []string{"keep-alive"},
+				"Keep-Alive":   []string{"timeout=5"},
+				"Upgrade":      []string{"websocket"},
 			},
 			wantCopy: map[string][]string{
 				"Content-Type": {"text/plain"},
@@ -336,7 +337,7 @@ func TestCopyHeader(t *testing.T) {
 		{
 			name: "copy multi-value headers",
 			src: http.Header{
-				"Accept":    []string{"text/html", "application/json"},
+				"Accept":          []string{"text/html", "application/json"},
 				"X-Forwarded-For": []string{"192.168.1.1", "10.0.0.1"},
 			},
 			wantCopy: map[string][]string{
@@ -379,28 +380,35 @@ func TestCopyHeader(t *testing.T) {
 func TestServeHTTP_CacheHit(t *testing.T) {
 	// Create a backend that should NOT be called
 	backendCalled := false
-	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	backendServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		backendCalled = true
 		t.Error("Backend should not be called on cache hit")
 	}))
-	defer backend.Close()
+	defer backendServer.Close()
 
 	// Create proxy with cache
-	mockCache := cache.NewMemoryCache(config.CacheConfig{
+	mockCache := cache.NewMemoryCache(&config.CacheConfig{
 		Disabled:      false,
 		DefaultTTL:    5 * time.Minute,
 		MaxAge:        1 * time.Hour,
 		PurgeInterval: 10 * time.Minute,
 	})
 
+	// Create a backend pool with the test backend
+	pool := backend.NewPool(&config.PoolConfig{
+		Backends: []config.BackendConfig{
+			{Url: backendServer.URL, Weight: 1, MaxConns: 100},
+		},
+	})
+
 	p := &Proxy{
-		targets: []string{backend.URL},
-		client:  &http.Client{},
-		cache:   mockCache,
+		pool:   pool,
+		client: &http.Client{},
+		cache:  mockCache,
 	}
 
 	// Pre-populate cache
-	cacheKey := "GET:" + backend.URL + "/test"
+	cacheKey := "GET:" + backendServer.URL + "/test"
 	cachedBody := []byte("cached response")
 	cachedHeaders := http.Header{
 		"Content-Type": []string{"text/plain"},
@@ -440,26 +448,33 @@ func TestServeHTTP_CacheHit(t *testing.T) {
 // TestServeHTTP_CacheMiss tests cache miss scenario
 func TestServeHTTP_CacheMiss(t *testing.T) {
 	// Create a backend
-	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	backendServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "max-age=300")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"message":"hello"}`))
 	}))
-	defer backend.Close()
+	defer backendServer.Close()
 
 	// Create proxy with cache
-	mockCache := cache.NewMemoryCache(config.CacheConfig{
+	mockCache := cache.NewMemoryCache(&config.CacheConfig{
 		Disabled:      false,
 		DefaultTTL:    5 * time.Minute,
 		MaxAge:        1 * time.Hour,
 		PurgeInterval: 10 * time.Minute,
 	})
 
+	// Create a backend pool with the test backend
+	pool := backend.NewPool(&config.PoolConfig{
+		Backends: []config.BackendConfig{
+			{Url: backendServer.URL, Weight: 1, MaxConns: 100},
+		},
+	})
+
 	p := &Proxy{
-		targets: []string{backend.URL},
-		client:  &http.Client{},
-		cache:   mockCache,
+		pool:   pool,
+		client: &http.Client{},
+		cache:  mockCache,
 	}
 
 	// Make request
@@ -478,7 +493,7 @@ func TestServeHTTP_CacheMiss(t *testing.T) {
 	}
 
 	// Verify response was cached
-	cacheKey := "GET:" + backend.URL + "/test"
+	cacheKey := "GET:" + backendServer.URL + "/test"
 	if cached, _, ok := mockCache.Get(cacheKey); !ok {
 		t.Error("Response should have been cached")
 	} else if string(cached) != `{"message":"hello"}` {
@@ -488,23 +503,30 @@ func TestServeHTTP_CacheMiss(t *testing.T) {
 
 // TestServeHTTP_NonCachableMethod tests that POST requests are not cached
 func TestServeHTTP_NonCachableMethod(t *testing.T) {
-	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	backendServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("response"))
 	}))
-	defer backend.Close()
+	defer backendServer.Close()
 
-	mockCache := cache.NewMemoryCache(config.CacheConfig{
+	mockCache := cache.NewMemoryCache(&config.CacheConfig{
 		Disabled:      false,
 		DefaultTTL:    5 * time.Minute,
 		MaxAge:        1 * time.Hour,
 		PurgeInterval: 10 * time.Minute,
 	})
 
+	// Create a backend pool with the test backend
+	pool := backend.NewPool(&config.PoolConfig{
+		Backends: []config.BackendConfig{
+			{Url: backendServer.URL, Weight: 1, MaxConns: 100},
+		},
+	})
+
 	p := &Proxy{
-		targets: []string{backend.URL},
-		client:  &http.Client{},
-		cache:   mockCache,
+		pool:   pool,
+		client: &http.Client{},
+		cache:  mockCache,
 	}
 
 	// Make POST request
@@ -514,7 +536,7 @@ func TestServeHTTP_NonCachableMethod(t *testing.T) {
 	p.ServeHTTP(rec, req)
 
 	// Verify response was NOT cached
-	cacheKey := "POST:" + backend.URL + "/test"
+	cacheKey := "POST:" + backendServer.URL + "/test"
 	if _, _, ok := mockCache.Get(cacheKey); ok {
 		t.Error("POST request should not be cached")
 	}

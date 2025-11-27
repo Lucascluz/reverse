@@ -15,13 +15,13 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("error loading config file: %w", err)
 	}
 
-	// Unmarshall proxy config
+	// Unmarshall config
 	config := &Config{}
 	err = yaml.Unmarshal(file, &config)
 	if err != nil {
-		return nil, fmt.Errorf("invalid syntax at proxy config: %w", err)
+		return nil, fmt.Errorf("invalid config syntax: %w", err)
 	}
-
+	
 	err = config.applyDefaults()
 	if err != nil {
 		return nil, fmt.Errorf("config validation failed: %w", err)

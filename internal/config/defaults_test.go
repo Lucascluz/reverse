@@ -13,10 +13,12 @@ func TestApplyDefaults(t *testing.T) {
 		validate func(t *testing.T, cfg *Config)
 	}{
 		{
-			name: "minimal config with only targets",
+			name: "minimal config with only backends",
 			input: Config{
-				Proxy: ProxyConfig{
-					Targets: []string{"http://localhost:8081"},
+				Pool: PoolConfig{
+					Backends: []BackendConfig{
+						{Url: "http://localhost:8081"},
+					},
 				},
 			},
 			wantErr: false,
@@ -42,21 +44,33 @@ func TestApplyDefaults(t *testing.T) {
 				if cfg.Cache.PurgeInterval != DefaultPurgeInterval {
 					t.Errorf("Expected PurgeInterval %v, got %v", DefaultPurgeInterval, cfg.Cache.PurgeInterval)
 				}
+
+				// Check backend defaults
+				if cfg.Pool.Backends[0].Weight != DefaultWeight {
+					t.Errorf("Expected Weight %d, got %d", DefaultWeight, cfg.Pool.Backends[0].Weight)
+				}
+				if cfg.Pool.Backends[0].MaxConns != DefaultMaxConns {
+					t.Errorf("Expected MaxConns %d, got %d", DefaultMaxConns, cfg.Pool.Backends[0].MaxConns)
+				}
 			},
 		},
 		{
 			name: "config with explicit values",
 			input: Config{
 				Proxy: ProxyConfig{
-					Host:    "0.0.0.0",
-					Port:    "9090",
-					Targets: []string{"http://localhost:8081"},
+					Host: "0.0.0.0",
+					Port: "9090",
 				},
 				Cache: CacheConfig{
-					Disabled: true,
+					Disabled:      true,
 					DefaultTTL:    10 * time.Minute,
 					MaxAge:        2 * time.Hour,
 					PurgeInterval: 5 * time.Minute,
+				},
+				Pool: PoolConfig{
+					Backends: []BackendConfig{
+						{Url: "http://localhost:8081", Weight: 2, MaxConns: 50},
+					},
 				},
 			},
 			wantErr: false,
@@ -71,10 +85,16 @@ func TestApplyDefaults(t *testing.T) {
 				if cfg.Cache.DefaultTTL != 10*time.Minute {
 					t.Errorf("Expected DefaultTTL 10m, got %v", cfg.Cache.DefaultTTL)
 				}
+				if cfg.Pool.Backends[0].Weight != 2 {
+					t.Errorf("Expected Weight 2, got %d", cfg.Pool.Backends[0].Weight)
+				}
+				if cfg.Pool.Backends[0].MaxConns != 50 {
+					t.Errorf("Expected MaxConns 50, got %d", cfg.Pool.Backends[0].MaxConns)
+				}
 			},
 		},
 		{
-			name: "config without targets should fail",
+			name: "config without backends should fail",
 			input: Config{
 				Proxy: ProxyConfig{
 					Host: "localhost",

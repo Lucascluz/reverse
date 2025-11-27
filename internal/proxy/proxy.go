@@ -5,16 +5,15 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Lucascluz/reverse/internal/backend"
 	"github.com/Lucascluz/reverse/internal/cache"
 	"github.com/Lucascluz/reverse/internal/config"
 )
 
 type Proxy struct {
-
-	// TODO: Implement proper target management
-	targets []string
-
 	client *http.Client
+
+	pool *backend.Pool
 
 	cache cache.Cache
 }
@@ -36,8 +35,8 @@ func NewProxy(cfg *config.Config) *Proxy {
 
 	// TODO: Implement configuration options for cache and targets
 	return &Proxy{
-		targets: cfg.Proxy.Targets,
-		cache:   cache.NewMemoryCache(cfg.Cache),
+		pool:  backend.NewPool(&cfg.Pool),
+		cache: cache.NewMemoryCache(&cfg.Cache),
 		// Initialize the client with the custom transport
 		client: &http.Client{
 			Transport: transport,

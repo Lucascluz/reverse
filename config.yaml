@@ -1,13 +1,41 @@
 proxy:
   host: "localhost"
   port: "8080"
-  targets:
-    - "http://localhost:8081"
-    - "http://localhost:8082"
-    - "http://localhost:8083"
-    - "http://localhost:8084"
 
 cache:
   disabled: false
   default_ttl: 5m
   purge_interval: 10m
+
+# Backend pool configuration
+pool:
+  # Health check settings
+  # health_check:
+  #   enabled: true
+  #   interval: 10s          # How often to check backend health
+  #   timeout: 2s            # Health check timeout
+  #   unhealthy_threshold: 3 # Failures before marking unhealthy
+  #   healthy_threshold: 2   # Successes before marking healthy
+  
+  # # Load balancing strategy
+  # load_balancing:
+  #   strategy: "round_robin" # Options: round_robin, least_connections, weighted
+  #   timeout: 30s            # Backend request timeout
+  
+  # List of backend servers
+  backends:
+    - url: "http://localhost:8081"
+      weight: 1            # Optional: for weighted load balancing
+      max_conns: 100       # Optional: max concurrent connections
+    
+    - url: "http://localhost:8082"
+      weight: 1
+      max_conns: 100
+    
+    - url: "http://localhost:8083"
+      weight: 1
+      max_conns: 100
+    
+    - url: "http://localhost:8084"
+      weight: 1
+      max_conns: 100

@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"io"
-	"math/rand/v2"
 	"net/http"
 	"strconv"
 	"strings"
@@ -24,7 +23,7 @@ var hopHeaders = []string{
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: Implement proper load balancing strategy
-	nextTarget := p.targets[rand.IntN(len(p.targets))]
+	nextTarget := p.pool.NextUrl()
 
 	cacheKey := r.Method + ":" + nextTarget + r.URL.RequestURI()
 
@@ -77,7 +76,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// Determine TTL for cache entry
 		ttl := p.determineTTL(resp.Header)
 		expires := time.Now().Add(ttl)
-		
+
 		// Store cache entry
 		p.cache.Set(cacheKey, body, resp.Header, expires)
 	}
