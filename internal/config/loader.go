@@ -21,7 +21,7 @@ func Load(path string) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid config syntax: %w", err)
 	}
-	
+
 	err = config.applyDefaults()
 	if err != nil {
 		return nil, fmt.Errorf("config validation failed: %w", err)

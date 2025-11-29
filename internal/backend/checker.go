@@ -16,12 +16,28 @@ type HealthChecker struct {
 }
 
 func NewHealthChecker(cfg *config.HealthCheckerConfig) *HealthChecker {
-	hc := &HealthChecker{
-		client: &http.Client{Timeout: cfg.Timeout},
-		ticker: time.NewTicker(cfg.Interval),
-		stop:   make(chan struct{}),
+	
+	// Defensive defaults: fallback to config package defaults when tests left values zero
+	var interval, timeout time.Duration
+	if cfg == nil {
+		interval = config.DefaultInterval
+		timeout = config.DefaultTimeout
+	} else {
+		interval = cfg.Interval
+		timeout = cfg.Timeout
+		if interval <= 0 {
+			interval = config.DefaultInterval
+		}
+		if timeout <= 0 {
+			timeout = config.DefaultTimeout
+		}
 	}
 
+	hc := &HealthChecker{
+		client: &http.Client{Timeout: timeout},
+		ticker: time.NewTicker(interval),
+		stop:   make(chan struct{}),
+	}
 	return hc
 }
 
@@ -46,21 +62,21 @@ func (hc *HealthChecker) Stop() {
 func healthCheck(client *http.Client, backend *Backend) {
 	// Lock to safely check backoff and update LastCheck
 	backend.mu.Lock()
-	
+
 	// Check if backend is backed off
 	if time.Now().Before(backend.LastCheck.Add(backend.BackoffTime)) {
 		backend.mu.Unlock()
 		return
 	}
-	
+
 	backend.LastCheck = time.Now()
-	
+
 	// Unlock before http request
 	backend.mu.Unlock()
 
-	// Health check 
+	// Health check
 	resp, err := client.Get(backend.HealthUrl)
-	
+
 	// Close body if we got a response
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()

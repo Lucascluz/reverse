@@ -13,6 +13,7 @@ type Config struct {
 type ProxyConfig struct {
 	Host string `yaml:"host"`
 	Port string `yaml:"port"`
+	ProbePort string `yaml:"probe_port"`
 }
 
 type CacheConfig struct {

@@ -3,6 +3,7 @@ package proxy
 import (
 	"net"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/Lucascluz/reverse/internal/backend"
@@ -11,11 +12,16 @@ import (
 )
 
 type Proxy struct {
-	client *http.Client
+	Host      string
+	Port      string
+	ProbePort string
 
-	pool *backend.Pool
+	client      *http.Client
+	probeClient *http.Client
+	pool        *backend.Pool
+	cache       cache.Cache
 
-	cache cache.Cache
+	ready atomic.Bool
 }
 
 func NewProxy(cfg *config.Config) *Proxy {
@@ -33,11 +39,20 @@ func NewProxy(cfg *config.Config) *Proxy {
 		ExpectContinueTimeout: 1 * time.Second,
 	}
 
-	// TODO: Implement configuration options for cache and targets
-	return &Proxy{
-		pool:  backend.NewPool(&cfg.Pool),
-		cache: cache.NewMemoryCache(&cfg.Cache),
-		// Initialize the client with the custom transport
+	probeTransport := &http.Transport{
+		MaxIdleConns:        10,
+		MaxIdleConnsPerHost: 2,
+		IdleConnTimeout:     5 * time.Second,
+		TLSHandshakeTimeout: 5 * time.Microsecond,
+		DisableKeepAlives:   false,
+	}
+
+	proxy := &Proxy{
+
+		Host:      cfg.Proxy.Host,
+		Port:      cfg.Proxy.Port,
+		ProbePort: cfg.Proxy.ProbePort,
+
 		client: &http.Client{
 			Transport: transport,
 			// Do not follow redirects automatically in a proxy
@@ -45,5 +60,28 @@ func NewProxy(cfg *config.Config) *Proxy {
 				return http.ErrUseLastResponse
 			},
 		},
+
+		probeClient: &http.Client{
+			Transport: probeTransport,
+			Timeout:   1 * time.Second,
+		},
+
+		pool:  backend.NewPool(&cfg.Pool),
+		cache: cache.NewMemoryCache(&cfg.Cache),
+
+		ready: atomic.Bool{},
 	}
+
+	// TODO: Implement proper readyness checking
+	proxy.ready.Store(true)
+	
+	return proxy
+}
+
+func (p *Proxy) SetReady(v bool) {
+	p.ready.Store(v)
+}
+
+func (p *Proxy) IsReady() bool {
+	return p.ready.Load()
 }

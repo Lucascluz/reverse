@@ -7,17 +7,22 @@ import (
 )
 
 const (
+	// Proxy defaults	
 	DefaultHost = "localhost"
 	DefaultPort = "8080"
+	DefaultProbePort = "8085"
 
+	// Cache defaults	
 	DefaultTTL           = 5 * time.Minute  // Conservative fallback
 	DefaultMaxAge        = 24 * time.Hour   // Reasonable upper bound
 	DefaultPurgeInterval = 10 * time.Minute // Cleanup frequency
 
+	// Backend defaults	
+	DefaultName     = "backend"
 	DefaultWeight   = 1
 	DefaultMaxConns = 100
 
-	DefaultName     = "backend"
+	// Health check defaults	
 	DefaultTimeout  = 5 * time.Second
 	DefaultInterval = 10 * time.Second
 )
@@ -31,6 +36,10 @@ func (c *Config) applyDefaults() error {
 
 	if c.Proxy.Port == "" {
 		c.Proxy.Port = DefaultPort
+	}
+
+	if c.Proxy.ProbePort == "" {
+		c.Proxy.ProbePort = DefaultProbePort
 	}
 
 	// Apply defaults for cache config
