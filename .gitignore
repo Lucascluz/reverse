@@ -1,3 +1,9 @@
+# 
+/bin/
+/logs/
+/bin/*
+logs/*
+
 # Local docs
 REFERENCE.md
 TODO.md

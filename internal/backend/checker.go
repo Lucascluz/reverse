@@ -16,7 +16,7 @@ type HealthChecker struct {
 }
 
 func NewHealthChecker(cfg *config.HealthCheckerConfig) *HealthChecker {
-	
+
 	// Defensive defaults: fallback to config package defaults when tests left values zero
 	var interval, timeout time.Duration
 	if cfg == nil {
@@ -41,13 +41,19 @@ func NewHealthChecker(cfg *config.HealthCheckerConfig) *HealthChecker {
 	return hc
 }
 
-func (hc *HealthChecker) Start(backends []*Backend) {
+func (hc *HealthChecker) Start(backends []*Backend, updateReady func()) {
 	for {
 		select {
 		case <-hc.ticker.C:
 			for _, backend := range backends {
 				go healthCheck(hc.client, backend)
 			}
+			
+			// Update proxy readyness during health check
+			if updateReady != nil {
+				updateReady()
+			}
+			
 		case <-hc.stop:
 			hc.ticker.Stop()
 			return

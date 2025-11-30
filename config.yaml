@@ -1,7 +1,7 @@
 proxy:
   host: "localhost"
   port: "8080"
-  probe_port: "8085"
+  probe_port: "9090"
 
 cache:
   disabled: false

@@ -399,7 +399,7 @@ func TestServeHTTP_CacheHit(t *testing.T) {
 		Backends: []config.BackendConfig{
 			{Url: backendServer.URL, Weight: 1, MaxConns: 100},
 		},
-	})
+	}, func(){})
 
 	p := &Proxy{
 		pool:   pool,
@@ -469,7 +469,7 @@ func TestServeHTTP_CacheMiss(t *testing.T) {
 		Backends: []config.BackendConfig{
 			{Url: backendServer.URL, Weight: 1, MaxConns: 100},
 		},
-	})
+	}, func() {})
 
 	p := &Proxy{
 		pool:   pool,
@@ -521,7 +521,7 @@ func TestServeHTTP_NonCachableMethod(t *testing.T) {
 		Backends: []config.BackendConfig{
 			{Url: backendServer.URL, Weight: 1, MaxConns: 100},
 		},
-	})
+	}, func() {})
 
 	p := &Proxy{
 		pool:   pool,

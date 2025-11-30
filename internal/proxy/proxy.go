@@ -66,15 +66,18 @@ func NewProxy(cfg *config.Config) *Proxy {
 			Timeout:   1 * time.Second,
 		},
 
-		pool:  backend.NewPool(&cfg.Pool),
 		cache: cache.NewMemoryCache(&cfg.Cache),
-
 		ready: atomic.Bool{},
 	}
 
-	// TODO: Implement proper readyness checking
-	proxy.ready.Store(true)
-	
+	// Create pool with readiness callback
+	proxy.pool = backend.NewPool(&cfg.Pool, func() {
+		proxy.SetReady(proxy.pool.HealthyCount() > 0)
+	})
+
+	// Initial readiness (will be updated by callback soon)
+	proxy.ready.Store(proxy.pool.HealthyCount() > 0)
+
 	return proxy
 }
 

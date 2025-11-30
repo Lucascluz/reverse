@@ -9,12 +9,13 @@ import (
 
 type Pool struct {
 	backends      []*Backend
+	
 	healthChecker *HealthChecker
 
 	mu sync.RWMutex
 }
 
-func NewPool(cfg *config.PoolConfig) *Pool {
+func NewPool(cfg *config.PoolConfig, updateReady func()) *Pool {
 
 	backends := make([]*Backend, len(cfg.Backends))
 	for i, backendCfg := range cfg.Backends {
@@ -27,11 +28,12 @@ func NewPool(cfg *config.PoolConfig) *Pool {
 		mu:            sync.RWMutex{},
 	}
 
-	go pool.healthChecker.Start(backends)
+	go pool.healthChecker.Start(backends, updateReady)
 
 	return pool
 }
 
+// TODO: Implement proper loadbalancing
 func (p *Pool) NextUrl() string {
     p.mu.RLock()
     defer p.mu.RUnlock()
@@ -61,3 +63,20 @@ func (p *Pool) NextUrl() string {
     return "" // or panic, or error
 }
 
+func (p *Pool) HealthyCount() int {
+    p.mu.RLock()
+    defer p.mu.RUnlock()
+
+    var count int
+    for _, backend := range p.backends {
+        backend.mu.RLock()
+        isHealthy := backend.Healthy
+        backend.mu.RUnlock()
+        
+        if isHealthy {
+            count++
+        }
+    }
+
+    return count
+}
