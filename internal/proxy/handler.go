@@ -34,6 +34,12 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if cached, headers, ok := p.cache.Get(cacheKey); ok {
 			copyHeader(w.Header(), headers)
 			w.Header().Set("X-Cache", "HIT")
+
+			// inform middleware about cache decision (if wrapped)
+			if cdw, ok := w.(interface{ SetCacheDecision(string, string, string) }); ok {
+				cdw.SetCacheDecision("HIT", "cached entry", "")
+			}
+
 			w.WriteHeader(http.StatusOK)
 			w.Write(cached)
 			return
@@ -79,6 +85,11 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		// Store cache entry
 		p.cache.Set(cacheKey, body, resp.Header, expires)
+
+		// inform middleware that this response was stored in cache
+		if cdw, ok := w.(interface{ SetCacheDecision(string, string, string) }); ok {
+			cdw.SetCacheDecision("MISS", "stored", nextTarget)
+		}
 	}
 }
 

@@ -9,12 +9,14 @@ import (
 	"github.com/Lucascluz/reverse/internal/backend"
 	"github.com/Lucascluz/reverse/internal/cache"
 	"github.com/Lucascluz/reverse/internal/config"
+	"github.com/Lucascluz/reverse/internal/logger"
 )
 
 type Proxy struct {
 	Host      string
 	Port      string
 	ProbePort string
+	Logger    *logger.Logger
 
 	client      *http.Client
 	probeClient *http.Client
@@ -47,11 +49,15 @@ func NewProxy(cfg *config.Config) *Proxy {
 		DisableKeepAlives:   false,
 	}
 
+	// Initialize logger
+	baseLogger := logger.New("proxy")
+
 	proxy := &Proxy{
 
 		Host:      cfg.Proxy.Host,
 		Port:      cfg.Proxy.Port,
 		ProbePort: cfg.Proxy.ProbePort,
+		Logger:    baseLogger,
 
 		client: &http.Client{
 			Transport: transport,
