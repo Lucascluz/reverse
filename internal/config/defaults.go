@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -25,6 +26,9 @@ const (
 	// Health check defaults	
 	DefaultTimeout  = 5 * time.Second
 	DefaultInterval = 10 * time.Second
+	
+	// Load balancer defaults
+	DefaultLoadBalancerType = "round-robin"
 )
 
 func (c *Config) applyDefaults() error {
@@ -68,26 +72,33 @@ func (c *Config) applyDefaults() error {
 	}
 
 	// Apply defaults for backend config
-	for i, backend := range c.Pool.Backends {
+	for i := range c.Pool.Backends {
+		// take pointer to element so we mutate the slice element directly
+		b := &c.Pool.Backends[i]
 
-		if backend.Name == "" {
-			backend.Name = DefaultName + strconv.Itoa(i)
+		if b.Name == "" {
+			b.Name = DefaultName + strconv.Itoa(i)
 		}
 
-		if backend.Url == "" {
-			return fmt.Errorf("%s missing URL", backend.Name)
+		if b.Url == "" {
+			return fmt.Errorf("%s missing URL", b.Name)
 		}
 
-		if backend.HealthUrl == "" {
-			backend.HealthUrl = backend.Url + "/health"
+		// If health_url is empty, build it from Url; if it's a relative path like "/health",
+		// prepend the backend URL.
+		if b.HealthUrl == "" {
+			b.HealthUrl = strings.TrimRight(b.Url, "/") + "/health"
+		} else if strings.HasPrefix(b.HealthUrl, "/") {
+			// relative path -> join with base URL
+			b.HealthUrl = strings.TrimRight(b.Url, "/") + b.HealthUrl
 		}
 
-		if backend.Weight == 0 {
-			backend.Weight = DefaultWeight
+		if b.Weight == 0 {
+			b.Weight = DefaultWeight
 		}
 
-		if backend.MaxConns == 0 {
-			backend.MaxConns = DefaultMaxConns
+		if b.MaxConns == 0 {
+			b.MaxConns = DefaultMaxConns
 		}
 	}
 
@@ -98,6 +109,11 @@ func (c *Config) applyDefaults() error {
 
 	if c.Pool.HealthChecker.Timeout == 0 {
 		c.Pool.HealthChecker.Timeout = DefaultTimeout
+	}
+
+	// Apply defaults for load balancer config
+	if c.Pool.LoadBalancer.Type == "" {
+		c.Pool.LoadBalancer.Type = DefaultLoadBalancerType
 	}
 
 	return nil
