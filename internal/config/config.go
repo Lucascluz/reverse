@@ -26,6 +26,7 @@ type CacheConfig struct {
 type PoolConfig struct {
 	Backends      []BackendConfig     `yaml:"backends"`
 	HealthChecker HealthCheckerConfig `yaml:"health_checker"`
+	LoadBalancer  LoadBalancerConfig  `yaml:"load_balancer"`
 }
 
 type BackendConfig struct {
@@ -39,4 +40,8 @@ type BackendConfig struct {
 type HealthCheckerConfig struct {
 	Interval time.Duration `yaml:"interval"`
 	Timeout  time.Duration `yaml:"timeout"`
+}
+
+type LoadBalancerConfig struct {
+	Type string `yaml:"type"`
 }

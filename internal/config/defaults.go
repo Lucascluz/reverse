@@ -8,25 +8,25 @@ import (
 )
 
 const (
-	// Proxy defaults	
-	DefaultHost = "localhost"
-	DefaultPort = "8080"
+	// Proxy defaults
+	DefaultHost      = "localhost"
+	DefaultPort      = "8080"
 	DefaultProbePort = "8085"
 
-	// Cache defaults	
+	// Cache defaults
 	DefaultTTL           = 5 * time.Minute  // Conservative fallback
 	DefaultMaxAge        = 24 * time.Hour   // Reasonable upper bound
 	DefaultPurgeInterval = 10 * time.Minute // Cleanup frequency
 
-	// Backend defaults	
+	// Backend defaults
 	DefaultName     = "backend"
 	DefaultWeight   = 1
 	DefaultMaxConns = 100
 
-	// Health check defaults	
+	// Health check defaults
 	DefaultTimeout  = 5 * time.Second
 	DefaultInterval = 10 * time.Second
-	
+
 	// Load balancer defaults
 	DefaultLoadBalancerType = "round-robin"
 )

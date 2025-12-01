@@ -11,7 +11,9 @@ type Pool struct {
 	backends      []*Backend
 	
 	healthChecker *HealthChecker
-
+	
+	loadBalancer *LoadBalancer
+	
 	mu sync.RWMutex
 }
 
