@@ -77,6 +77,7 @@ func NewProxy(cfg *config.Config) *Proxy {
 	}
 
 	// Create pool with readiness callback
+	// TODO: Implement efficient method for readyness check not HealthyCount
 	proxy.pool = backend.NewPool(&cfg.Pool, func() {
 		proxy.SetReady(proxy.pool.HealthyCount() > 0)
 	})

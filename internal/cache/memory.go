@@ -11,7 +11,7 @@ import (
 type memoryCache struct {
 	mu         sync.RWMutex
 	disabled   bool
-	items      map[string]Entry // Map to store cached entries
+	items      map[string]Entry // Map to store cached entries // rename to store
 	defaultTTL time.Duration    // Default time-to-live for cached entries
 	maxAge     time.Duration    // Maximum age for cached entries
 

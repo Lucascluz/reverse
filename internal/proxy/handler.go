@@ -25,6 +25,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// TODO: Implement proper load balancing strategy
 	nextTarget := p.pool.NextUrl()
 
+	// TODO: Remove target url from cache key
 	cacheKey := r.Method + ":" + nextTarget + r.URL.RequestURI()
 
 	// If cache is enabled, check if the requested resource is cached
@@ -95,11 +96,13 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func isCachable(method string, status int, headers http.Header) bool {
 
+	// TODO: Reason about caching other methods
 	// Only cache GET and HEAD requests
 	if method != "GET" && method != "HEAD" {
 		return false
 	}
 
+	// TODO: Handle 404 and permanently redirection
 	// Only cache sucess responses
 	if status < 200 || status >= 300 {
 		return false

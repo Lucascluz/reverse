@@ -49,11 +49,10 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleRoot(chosenPort))
-	mux.HandleFunc("/health", handleHealth(chosenPort))
-	mux.HandleFunc("/slow", handleSlowRequest(chosenPort))
-	mux.HandleFunc("/data", handleDataRequest(chosenPort))
-	mux.HandleFunc("/forward", handleForward(chosenPort))
-	mux.HandleFunc("/vary", handleVary(chosenPort))
+	mux.HandleFunc("/health", handleHealth(chosenPort)) // health
+	mux.HandleFunc("/slow", handleSlowRequest(chosenPort)) // slow
+	mux.HandleFunc("/data", handleDataRequest(chosenPort)) // random data request
+	mux.HandleFunc("/forward", handleForward(chosenPort)) // logs headers
 
 	log.Printf("[Backend:%d] Listening on %s (requested %d). PID=%d", chosenPort, ln.Addr().String(), startPort, os.Getpid())
 
@@ -217,18 +216,5 @@ func handleForward(port int) http.HandlerFunc {
 			"timestamp":         time.Now().Format(time.RFC3339Nano),
 		}
 		_ = json.NewEncoder(w).Encode(resp)
-	}
-}
-
-// /vary sets a Vary header and returns small content — useful to exercise cache Vary behavior
-func handleVary(port int) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		id := requestCounter.Add(1)
-		logRequest(port, r, id, "vary")
-		w.Header().Set("Vary", "User-Agent")
-		w.Header().Set("Content-Type", "text/plain")
-		w.Header().Set("X-Backend-Port", strconv.Itoa(port))
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "Vary response from backend %d | req=%d | ua=%s", port, id, r.Header.Get("User-Agent"))
 	}
 }
