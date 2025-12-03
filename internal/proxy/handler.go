@@ -3,9 +3,7 @@ package proxy
 import (
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
-	"time"
 )
 
 var hopHeaders = []string{
@@ -25,18 +23,14 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// TODO: Implement proper load balancing strategy
 	nextTarget := p.pool.NextUrl()
 
-	var cacheKey string
-	if r.URL.RawQuery != "" {
-		cacheKey = r.Method + ":" + r.URL.Path + "?" + r.URL.RawQuery
-	} else {
-		cacheKey = r.Method + ":" + r.URL.Path
-	}
+	// Generate cache key
+	key := p.cache.GenKey(r.Method, r.URL.Host, r.URL.Path, r.Header)
 
 	// If cache is enabled, check if the requested resource is cached
 	if p.cache != nil {
 
 		// Serve cached response
-		if cached, headers, ok := p.cache.Get(cacheKey); ok {
+		if cached, headers, ok := p.cache.Get(key); ok {
 
 			copyHeader(w.Header(), headers)
 			w.Header().Set("X-Cache", "HIT")
@@ -85,12 +79,8 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	cachable := p.cache != nil && isCachable(r.Method, resp.StatusCode, resp.Header)
 
 	if cachable {
-		// Determine TTL for cache entry
-		ttl := p.determineTTL(resp.Header)
-		expires := time.Now().Add(ttl)
-
 		// Store cache entry
-		p.cache.Set(cacheKey, body, resp.Header, expires)
+		p.cache.Set(key, body, resp.Header)
 
 		// inform middleware that this response was stored in cache
 		if cdw, ok := w.(interface{ SetCacheDecision(string, string, string) }); ok {
@@ -123,57 +113,17 @@ func isCachable(method string, status int, headers http.Header) bool {
 		}
 	}
 
+	// Don't cache responses with Vary: *
+	if vary := headers.Get("Vary"); vary != "" && strings.Contains(vary, "*") {
+		return false
+	}
+
 	// Don't cache responses with Set-Cookie
 	if headers.Get("Set-Cookie") != "" {
 		return false
 	}
 
 	return true
-}
-
-func (p *Proxy) determineTTL(headers http.Header) time.Duration {
-	var ttl time.Duration
-	maxAge := p.cache.GetMaxAge()
-
-	// Check Cache-Control: max-age
-	if cc := headers.Get("Cache-Control"); cc != "" {
-		if parsed := parseMaxAge(cc); parsed > 0 {
-			ttl = parsed
-		}
-	}
-
-	// Check for Expires header if no max-age found
-	if ttl == 0 {
-		if expires := headers.Get("Expires"); expires != "" {
-			if expireTime, err := http.ParseTime(expires); err == nil {
-				ttl = time.Until(expireTime)
-			}
-		}
-	}
-
-	// Use default TTL if no cache headers or negative/zero TTL
-	if ttl <= 0 {
-		return p.cache.GetDefaultTTL()
-	}
-
-	// Cap at MaxAge to prevent excessive caching
-	if ttl > maxAge {
-		return maxAge
-	}
-
-	return ttl
-}
-
-func parseMaxAge(cacheControl string) time.Duration {
-	for directive := range strings.SplitSeq(cacheControl, ",") {
-		directive = strings.TrimSpace(directive)
-		if after, found := strings.CutPrefix(directive, "max-age="); found {
-			if seconds, err := strconv.Atoi(after); err == nil && seconds > 0 {
-				return time.Duration(seconds) * time.Second
-			}
-		}
-	}
-	return 0
 }
 
 // Helper to copy headers while skipping hop-by-hop ones
