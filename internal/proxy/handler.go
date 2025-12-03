@@ -25,14 +25,19 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// TODO: Implement proper load balancing strategy
 	nextTarget := p.pool.NextUrl()
 
-	// TODO: Remove target url from cache key
-	cacheKey := r.Method + ":" + nextTarget + r.URL.RequestURI()
+	var cacheKey string
+	if r.URL.RawQuery != "" {
+		cacheKey = r.Method + ":" + r.URL.Path + "?" + r.URL.RawQuery
+	} else {
+		cacheKey = r.Method + ":" + r.URL.Path
+	}
 
 	// If cache is enabled, check if the requested resource is cached
 	if p.cache != nil {
 
 		// Serve cached response
 		if cached, headers, ok := p.cache.Get(cacheKey); ok {
+
 			copyHeader(w.Header(), headers)
 			w.Header().Set("X-Cache", "HIT")
 

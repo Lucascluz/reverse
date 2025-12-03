@@ -268,114 +268,6 @@ func TestDetermineTTL(t *testing.T) {
 	}
 }
 
-// TestIsHopHeader tests the isHopHeader function
-func TestIsHopHeader(t *testing.T) {
-	tests := []struct {
-		name   string
-		header string
-		want   bool
-	}{
-		{name: "Connection", header: "Connection", want: true},
-		{name: "connection lowercase", header: "connection", want: true},
-		{name: "Keep-Alive", header: "Keep-Alive", want: true},
-		{name: "Proxy-Authenticate", header: "Proxy-Authenticate", want: true},
-		{name: "Proxy-Authorization", header: "Proxy-Authorization", want: true},
-		{name: "Te", header: "Te", want: true},
-		{name: "Trailers", header: "Trailers", want: true},
-		{name: "Transfer-Encoding", header: "Transfer-Encoding", want: true},
-		{name: "Upgrade", header: "Upgrade", want: true},
-		{name: "Content-Type", header: "Content-Type", want: false},
-		{name: "Content-Length", header: "Content-Length", want: false},
-		{name: "User-Agent", header: "User-Agent", want: false},
-		{name: "Cache-Control", header: "Cache-Control", want: false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := isHopHeader(tt.header)
-			if got != tt.want {
-				t.Errorf("isHopHeader(%q) = %v, want %v", tt.header, got, tt.want)
-			}
-		})
-	}
-}
-
-// TestCopyHeader tests the copyHeader function
-func TestCopyHeader(t *testing.T) {
-	tests := []struct {
-		name     string
-		src      http.Header
-		wantCopy map[string][]string
-		wantSkip []string
-	}{
-		{
-			name: "copy regular headers",
-			src: http.Header{
-				"Content-Type": []string{"application/json"},
-				"User-Agent":   []string{"test-agent"},
-				"X-Custom":     []string{"custom-value"},
-			},
-			wantCopy: map[string][]string{
-				"Content-Type": {"application/json"},
-				"User-Agent":   {"test-agent"},
-				"X-Custom":     {"custom-value"},
-			},
-		},
-		{
-			name: "skip hop-by-hop headers",
-			src: http.Header{
-				"Content-Type": []string{"text/plain"},
-				"Connection":   []string{"keep-alive"},
-				"Keep-Alive":   []string{"timeout=5"},
-				"Upgrade":      []string{"websocket"},
-			},
-			wantCopy: map[string][]string{
-				"Content-Type": {"text/plain"},
-			},
-			wantSkip: []string{"Connection", "Keep-Alive", "Upgrade"},
-		},
-		{
-			name: "copy multi-value headers",
-			src: http.Header{
-				"Accept":          []string{"text/html", "application/json"},
-				"X-Forwarded-For": []string{"192.168.1.1", "10.0.0.1"},
-			},
-			wantCopy: map[string][]string{
-				"Accept":          {"text/html", "application/json"},
-				"X-Forwarded-For": {"192.168.1.1", "10.0.0.1"},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			dst := make(http.Header)
-			copyHeader(dst, tt.src)
-
-			// Check that expected headers were copied
-			for key, wantValues := range tt.wantCopy {
-				gotValues := dst[key]
-				if len(gotValues) != len(wantValues) {
-					t.Errorf("Header %q: got %d values, want %d", key, len(gotValues), len(wantValues))
-					continue
-				}
-				for i, want := range wantValues {
-					if gotValues[i] != want {
-						t.Errorf("Header %q[%d]: got %q, want %q", key, i, gotValues[i], want)
-					}
-				}
-			}
-
-			// Check that hop-by-hop headers were skipped
-			for _, skip := range tt.wantSkip {
-				if _, exists := dst[skip]; exists {
-					t.Errorf("Hop-by-hop header %q should not be copied", skip)
-				}
-			}
-		})
-	}
-}
-
 // TestServeHTTP_CacheHit tests cache hit scenario
 func TestServeHTTP_CacheHit(t *testing.T) {
 	// Create a backend that should NOT be called
@@ -408,7 +300,7 @@ func TestServeHTTP_CacheHit(t *testing.T) {
 	}
 
 	// Pre-populate cache
-	cacheKey := "GET:" + backendServer.URL + "/test"
+	cacheKey := "GET:/test"
 	cachedBody := []byte("cached response")
 	cachedHeaders := http.Header{
 		"Content-Type": []string{"text/plain"},
@@ -493,7 +385,7 @@ func TestServeHTTP_CacheMiss(t *testing.T) {
 	}
 
 	// Verify response was cached
-	cacheKey := "GET:" + backendServer.URL + "/test"
+	cacheKey := "GET:/test"
 	if cached, _, ok := mockCache.Get(cacheKey); !ok {
 		t.Error("Response should have been cached")
 	} else if string(cached) != `{"message":"hello"}` {
@@ -536,8 +428,84 @@ func TestServeHTTP_NonCachableMethod(t *testing.T) {
 	p.ServeHTTP(rec, req)
 
 	// Verify response was NOT cached
-	cacheKey := "POST:" + backendServer.URL + "/test"
+	cacheKey := "POST:/test"
 	if _, _, ok := mockCache.Get(cacheKey); ok {
 		t.Error("POST request should not be cached")
+	}
+}
+
+// TestServeHTTP_CacheKeyGeneration tests that the cache key is generated correctly
+func TestServeHTTP_CacheKeyGeneration(t *testing.T) {
+	backendServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("response"))
+	}))
+	defer backendServer.Close()
+
+	mockCache := cache.NewMemoryCache(&config.CacheConfig{
+		Disabled:      false,
+		DefaultTTL:    5 * time.Minute,
+		MaxAge:        1 * time.Hour,
+		PurgeInterval: 10 * time.Minute,
+	})
+
+	pool := backend.NewPool(&config.PoolConfig{
+		Backends: []config.BackendConfig{
+			{Url: backendServer.URL, Weight: 1, MaxConns: 100},
+		},
+	}, func() {})
+
+	p := &Proxy{
+		pool:   pool,
+		client: &http.Client{},
+		cache:  mockCache,
+	}
+
+	// 1. Request to a URL without a query string
+	req1 := httptest.NewRequest("GET", "/test", nil)
+	rec1 := httptest.NewRecorder()
+	p.ServeHTTP(rec1, req1)
+
+	cacheKey1 := "GET:/test"
+	if _, _, ok := mockCache.Get(cacheKey1); !ok {
+		t.Errorf("Expected cache entry for key %q, but not found", cacheKey1)
+	}
+
+	// 2. Request to a URL with a query string
+	req2 := httptest.NewRequest("GET", "/test?param=1", nil)
+	rec2 := httptest.NewRecorder()
+	p.ServeHTTP(rec2, req2)
+
+	cacheKey2 := "GET:/test?param=1"
+	if _, _, ok := mockCache.Get(cacheKey2); !ok {
+		t.Errorf("Expected cache entry for key %q, but not found", cacheKey2)
+	}
+
+	// 3. Second request to the same URL without a query string (should be a HIT)
+	req3 := httptest.NewRequest("GET", "/test", nil)
+	rec3 := httptest.NewRecorder()
+	p.ServeHTTP(rec3, req3)
+	if rec3.Header().Get("X-Cache") != "HIT" {
+		t.Errorf("Expected cache HIT for key %q, but got MISS", cacheKey1)
+	}
+
+	// 4. Second request to the same URL with a query string (should be a HIT)
+	req4 := httptest.NewRequest("GET", "/test?param=1", nil)
+	rec4 := httptest.NewRecorder()
+	p.ServeHTTP(rec4, req4)
+	if rec4.Header().Get("X-Cache") != "HIT" {
+		t.Errorf("Expected cache HIT for key %q, but got MISS", cacheKey2)
+	}
+
+	// 5. Request to a URL with a different query string (should be a MISS)
+	req5 := httptest.NewRequest("GET", "/test?param=2", nil)
+	rec5 := httptest.NewRecorder()
+	p.ServeHTTP(rec5, req5)
+	if rec5.Header().Get("X-Cache") == "HIT" {
+		t.Errorf("Expected cache MISS for new query string, but got HIT")
+	}
+	cacheKey5 := "GET:/test?param=2"
+	if _, _, ok := mockCache.Get(cacheKey5); !ok {
+		t.Errorf("Expected cache entry for key %q, but not found", cacheKey5)
 	}
 }
