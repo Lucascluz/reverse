@@ -25,10 +25,10 @@ func New(prefix string) *Logger {
 	}
 }
 
-func (l *Logger) Infof(format string, args ...interface{}) {
+func (l *Logger) Infof(format string, args ...any) {
 	log.Printf("[INFO] "+l.prefix+" "+format, args...)
 }
-func (l *Logger) Errorf(format string, args ...interface{}) {
+func (l *Logger) Errorf(format string, args ...any) {
 	log.Printf("[ERROR] "+l.prefix+" "+format, args...)
 }
 

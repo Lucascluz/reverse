@@ -12,10 +12,10 @@ const (
 	DefaultHost      = "localhost"
 	DefaultPort      = "8080"
 	DefaultProbePort = "8085"
+	DefaultTTL       = 5 * time.Minute // Conservative fallback
+	DefaultMaxAge    = 24 * time.Hour  // Reasonable upper bound
 
 	// Cache defaults
-	DefaultTTL           = 5 * time.Minute  // Conservative fallback
-	DefaultMaxAge        = 24 * time.Hour   // Reasonable upper bound
 	DefaultPurgeInterval = 10 * time.Minute // Cleanup frequency
 
 	// Backend defaults
@@ -46,17 +46,17 @@ func (c *Config) applyDefaults() error {
 		c.Proxy.ProbePort = DefaultProbePort
 	}
 
+	if c.Proxy.DefaultTTL == 0 {
+		c.Proxy.DefaultTTL = DefaultTTL
+	}
+
+	if c.Proxy.MaxAge == 0 {
+		c.Proxy.MaxAge = DefaultMaxAge
+	}
+
 	// Apply defaults for cache config
 
 	// Note: cache.Disabled defaults to false (cache enabled by default)
-
-	if c.Cache.DefaultTTL == 0 {
-		c.Cache.DefaultTTL = DefaultTTL
-	}
-
-	if c.Cache.MaxAge == 0 {
-		c.Cache.MaxAge = DefaultMaxAge
-	}
 
 	if c.Cache.PurgeInterval == 0 {
 		c.Cache.PurgeInterval = DefaultPurgeInterval

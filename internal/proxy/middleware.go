@@ -9,7 +9,7 @@ import (
 
 // cacheDecisionWriter is an interface the handler can use to set cache info.
 type cacheDecisionWriter interface {
-	SetCacheDecision(status string, reason string, backend string)
+	SetCacheDecision(status string, reason string, uri string)
 }
 
 // responseRecorder captures status/bytes and cache decision for the middleware.

@@ -9,19 +9,20 @@ import (
 	"github.com/Lucascluz/reverse/internal/backend"
 	"github.com/Lucascluz/reverse/internal/cache"
 	"github.com/Lucascluz/reverse/internal/config"
-	"github.com/Lucascluz/reverse/internal/logger"
 )
 
 type Proxy struct {
 	Host      string
 	Port      string
 	ProbePort string
-	Logger    *logger.Logger
 
 	client      *http.Client
 	probeClient *http.Client
 	pool        *backend.Pool
 	cache       cache.Cache
+
+	defaultTTL time.Duration
+	maxAge     time.Duration
 
 	ready atomic.Bool
 }
@@ -49,15 +50,11 @@ func NewProxy(cfg *config.Config) *Proxy {
 		DisableKeepAlives:   false,
 	}
 
-	// Initialize logger
-	baseLogger := logger.New("proxy")
-
 	proxy := &Proxy{
 
 		Host:      cfg.Proxy.Host,
 		Port:      cfg.Proxy.Port,
 		ProbePort: cfg.Proxy.ProbePort,
-		Logger:    baseLogger,
 
 		client: &http.Client{
 			Transport: transport,
@@ -71,8 +68,11 @@ func NewProxy(cfg *config.Config) *Proxy {
 			Transport: probeTransport,
 			Timeout:   1 * time.Second,
 		},
+		cache: cache.NewInMemoryCache(&cfg.Cache),
 
-		cache: cache.NewMemoryCache(&cfg.Cache),
+		defaultTTL: time.Duration(cfg.Proxy.DefaultTTL) * time.Second,
+		maxAge:     time.Duration(cfg.Proxy.MaxAge) * time.Second,
+
 		ready: atomic.Bool{},
 	}
 

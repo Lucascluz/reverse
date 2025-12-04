@@ -30,16 +30,16 @@ func TestApplyDefaults(t *testing.T) {
 				if cfg.Proxy.Port != DefaultPort {
 					t.Errorf("Expected port %s, got %s", DefaultPort, cfg.Proxy.Port)
 				}
+				if cfg.Proxy.DefaultTTL != DefaultTTL {
+					t.Errorf("Expected DefaultTTL %v, got %v", DefaultTTL, cfg.Proxy.DefaultTTL)
+				}
+				if cfg.Proxy.MaxAge != DefaultMaxAge {
+					t.Errorf("Expected MaxAge %v, got %v", DefaultMaxAge, cfg.Proxy.MaxAge)
+				}
 
 				// Check cache defaults
 				if cfg.Cache.Disabled != false {
 					t.Error("Expected cache to be enabled by default (Disabled = false)")
-				}
-				if cfg.Cache.DefaultTTL != DefaultTTL {
-					t.Errorf("Expected DefaultTTL %v, got %v", DefaultTTL, cfg.Cache.DefaultTTL)
-				}
-				if cfg.Cache.MaxAge != DefaultMaxAge {
-					t.Errorf("Expected MaxAge %v, got %v", DefaultMaxAge, cfg.Cache.MaxAge)
 				}
 				if cfg.Cache.PurgeInterval != DefaultPurgeInterval {
 					t.Errorf("Expected PurgeInterval %v, got %v", DefaultPurgeInterval, cfg.Cache.PurgeInterval)
@@ -58,13 +58,13 @@ func TestApplyDefaults(t *testing.T) {
 			name: "config with explicit values",
 			input: Config{
 				Proxy: ProxyConfig{
-					Host: "0.0.0.0",
-					Port: "9090",
+					Host:       "0.0.0.0",
+					Port:       "9090",
+					DefaultTTL: 10 * time.Minute,
+					MaxAge:     2 * time.Hour,
 				},
 				Cache: CacheConfig{
 					Disabled:      true,
-					DefaultTTL:    10 * time.Minute,
-					MaxAge:        2 * time.Hour,
 					PurgeInterval: 5 * time.Minute,
 				},
 				Pool: PoolConfig{
@@ -79,11 +79,11 @@ func TestApplyDefaults(t *testing.T) {
 				if cfg.Proxy.Host != "0.0.0.0" {
 					t.Errorf("Expected host 0.0.0.0, got %s", cfg.Proxy.Host)
 				}
+				if cfg.Proxy.DefaultTTL != 10*time.Minute {
+					t.Errorf("Expected DefaultTTL 10m, got %v", cfg.Proxy.DefaultTTL)
+				}
 				if cfg.Cache.Disabled != true {
 					t.Error("Expected cache to be disabled")
-				}
-				if cfg.Cache.DefaultTTL != 10*time.Minute {
-					t.Errorf("Expected DefaultTTL 10m, got %v", cfg.Cache.DefaultTTL)
 				}
 				if cfg.Pool.Backends[0].Weight != 2 {
 					t.Errorf("Expected Weight 2, got %d", cfg.Pool.Backends[0].Weight)
