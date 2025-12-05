@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/Lucascluz/reverse/internal/config"
-	"github.com/Lucascluz/reverse/internal/logger"
+	"github.com/Lucascluz/reverse/internal/middleware"
 	"github.com/Lucascluz/reverse/internal/proxy"
 )
 
@@ -26,9 +26,9 @@ func main() {
 	// Setup proxy
 	p := proxy.NewProxy(cfg)
 
-	// Create base request logger (internal/log) and wrap proxy with logging middleware
-	baseLogger := logger.New("proxy")
-	handler := proxy.LoggingMiddleware(baseLogger, p)
+	// Create base logger and wrap proxy with logging middleware
+	logger := middleware.NewLogger("proxy")
+	handler := middleware.Logging(logger, p)
 
 	// Setup servers
 	proxySrv := &http.Server{

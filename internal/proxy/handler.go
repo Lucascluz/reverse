@@ -4,6 +4,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/Lucascluz/reverse/internal/middleware"
 )
 
 // Implement http.Handler interface directly
@@ -24,7 +26,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// TODO: Implement proper load balancing strategy
 	nextTarget := p.pool.NextUrl()
 
-	outReq, err := http.NewRequest(r.Method, nextTarget + r.URL.Path, r.Body)
+	outReq, err := http.NewRequest(r.Method, nextTarget+r.URL.Path, r.Body)
 	if err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
@@ -57,7 +59,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		cached, reason := p.tryCachingResponse(r, resp.StatusCode, resp.Header, body)
 
 		// Notify middleware of cache decision
-		if cw, ok := w.(cacheDecisionWriter); ok {
+		if cw, ok := w.(middleware.CacheDecisionWriter); ok {
 			if cached {
 				cw.SetCacheDecision("CACHED", reason, r.RequestURI)
 			} else {
