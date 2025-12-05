@@ -8,12 +8,12 @@ import (
 )
 
 type Pool struct {
-	backends      []*Backend
-	
+	backends []*Backend
+
 	healthChecker *HealthChecker
-	
+
 	loadBalancer *LoadBalancer
-	
+
 	mu sync.RWMutex
 }
 
@@ -37,48 +37,45 @@ func NewPool(cfg *config.PoolConfig, updateReady func()) *Pool {
 
 // TODO: Implement proper loadbalancing
 func (p *Pool) NextUrl() string {
-    p.mu.RLock()
-    defer p.mu.RUnlock()
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 
-    // Filter healthy backends
-    var healthy []*Backend
-    for _, backend := range p.backends {
-        backend.mu.RLock()
-        isHealthy := backend.Healthy
-        backend.mu.RUnlock()
-        
-        if isHealthy {
-            healthy = append(healthy, backend)
-        }
-    }
+	// Filter healthy backends
+	var healthy []*Backend
+	for _, backend := range p.backends {
+		backend.mu.RLock()
+		isHealthy := backend.Healthy
+		backend.mu.RUnlock()
 
-    // TODO: Implement proper loadbalancing
-    if len(healthy) > 0 {
-        return healthy[rand.Intn(len(healthy))].Url
-    }
+		if isHealthy {
+			healthy = append(healthy, backend)
+		}
+	}
 
-    // Fallback: return first backend (or handle differently)
-    if len(p.backends) > 0 {
-        return p.backends[0].Url
-    }
+	// TODO: Implement proper loadbalancing
+	if len(healthy) > 0 {
+		return healthy[rand.Intn(len(healthy))].Url
+	}
 
-    return "" // or panic, or error
+	// Fallback: return first backend (or handle differently)
+	if len(p.backends) > 0 {
+		return p.backends[0].Url
+	}
+
+	return "" // or panic, or error
 }
 
-func (p *Pool) HealthyCount() int {
-    p.mu.RLock()
-    defer p.mu.RUnlock()
+// A pool is ready if there is at least one healthy backend
+func (p *Pool) IsReady() bool {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 
-    var count int
-    for _, backend := range p.backends {
-        backend.mu.RLock()
-        isHealthy := backend.Healthy
-        backend.mu.RUnlock()
-        
-        if isHealthy {
-            count++
-        }
-    }
-
-    return count
+	for _, backend := range p.backends {
+		backend.mu.RLock()
+		if backend.Healthy {
+			return true
+		}
+		backend.mu.RUnlock()
+	}
+	return false
 }
