@@ -6,9 +6,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Lucascluz/reverse/internal/backend"
 	"github.com/Lucascluz/reverse/internal/cache"
 	"github.com/Lucascluz/reverse/internal/config"
+	"github.com/Lucascluz/reverse/internal/pool"
 )
 
 type Proxy struct {
@@ -18,7 +18,7 @@ type Proxy struct {
 
 	client      *http.Client
 	probeClient *http.Client
-	pool        *backend.Pool
+	pool        *pool.Pool
 	cache       cache.Cache
 
 	defaultTTL time.Duration
@@ -27,7 +27,7 @@ type Proxy struct {
 	ready atomic.Bool
 }
 
-func NewProxy(cfg *config.Config) *Proxy {
+func New(cfg *config.Config) *Proxy {
 
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
@@ -46,7 +46,7 @@ func NewProxy(cfg *config.Config) *Proxy {
 		MaxIdleConns:        10,
 		MaxIdleConnsPerHost: 2,
 		IdleConnTimeout:     5 * time.Second,
-		TLSHandshakeTimeout: 5 * time.Microsecond,
+		TLSHandshakeTimeout: 5 * time.Second,
 		DisableKeepAlives:   false,
 	}
 
@@ -77,7 +77,7 @@ func NewProxy(cfg *config.Config) *Proxy {
 	}
 
 	// Create pool with readiness callback
-	proxy.pool = backend.NewPool(&cfg.Pool, func() {
+	proxy.pool = pool.New(&cfg.Pool, func() {
 		proxy.SetReady(proxy.pool.IsReady())
 	})
 

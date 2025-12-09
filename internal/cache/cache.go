@@ -10,4 +10,3 @@ type Cache interface {
 	Delete(key string)
 	Exists(key string) bool
 }
-

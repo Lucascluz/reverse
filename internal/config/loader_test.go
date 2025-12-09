@@ -62,7 +62,7 @@ func TestLoadInvalidFile(t *testing.T) {
 func TestLoadInvalidYAML(t *testing.T) {
 	tmpfile, _ := os.CreateTemp("", "bad-*.yaml")
 	defer os.Remove(tmpfile.Name())
-	
+
 	tmpfile.Write([]byte("invalid: yaml: content: {{"))
 	tmpfile.Close()
 

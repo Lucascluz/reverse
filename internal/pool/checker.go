@@ -1,18 +1,21 @@
-package backend
+package pool
 
 import (
 	"net/http"
+	"sync"
 	"time"
 
+	"github.com/Lucascluz/reverse/internal/backend"
 	"github.com/Lucascluz/reverse/internal/config"
 )
 
 type HealthChecker struct {
 	client *http.Client
 
-	ticker *time.Ticker
+	maxConcurrentChecks int
 
-	stop chan struct{}
+	ticker *time.Ticker
+	stop   chan struct{}
 }
 
 func NewHealthChecker(cfg *config.HealthCheckerConfig) *HealthChecker {
@@ -41,19 +44,38 @@ func NewHealthChecker(cfg *config.HealthCheckerConfig) *HealthChecker {
 	return hc
 }
 
-func (hc *HealthChecker) Start(backends []*Backend, updateReady func()) {
+func (hc *HealthChecker) Start(backends []*backend.Backend, updateReady func()) {
+
+	// Semaphore
+	sem := make(chan struct{}, hc.maxConcurrentChecks)
+
 	for {
 		select {
 		case <-hc.ticker.C:
-			for _, backend := range backends {
-				go healthCheck(hc.client, backend)
+
+			var wg sync.WaitGroup
+
+			for _, b := range backends {
+				wg.Add(1)
+
+				go func(backend *backend.Backend) {
+					defer wg.Done()
+
+					// Claim a spot
+					sem <- struct{}{}
+
+					// Release spot when done
+					defer func() { <-sem }()
+
+					healthCheck(hc.client, backend)
+				}(b)
 			}
-			
+
 			// Update proxy readyness during health check
 			if updateReady != nil {
 				updateReady()
 			}
-			
+
 		case <-hc.stop:
 			hc.ticker.Stop()
 			return
@@ -62,25 +84,17 @@ func (hc *HealthChecker) Start(backends []*Backend, updateReady func()) {
 }
 
 func (hc *HealthChecker) Stop() {
-	hc.stop <- struct{}{}
+	close(hc.stop)
 }
 
-func healthCheck(client *http.Client, backend *Backend) {
-	// Lock to safely check backoff and update LastCheck
-	backend.mu.Lock()
+func healthCheck(client *http.Client, backend *backend.Backend) {
 
-	// Check if backend is backed off
-	if time.Now().Before(backend.LastCheck.Add(backend.BackoffTime)) {
-		backend.mu.Unlock()
+	// If backend is backed off, abort current health check
+	if backend.IsBackedOff() {
 		return
 	}
 
-	backend.LastCheck = time.Now()
-
-	// Unlock before http request
-	backend.mu.Unlock()
-
-	// Health check
+	// Health check request
 	resp, err := client.Get(backend.HealthUrl)
 
 	// Close body if we got a response
@@ -88,25 +102,8 @@ func healthCheck(client *http.Client, backend *Backend) {
 		defer resp.Body.Close()
 	}
 
-	// Lock to update health status
-	backend.mu.Lock()
-	defer backend.mu.Unlock()
-
 	// Success case
-	if err == nil && resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		if !backend.Healthy {
-			backend.BackoffTime = 1 * time.Second
-		}
-		backend.Healthy = true
-		return
-	}
+	success := (err == nil && resp.StatusCode >= 200 && resp.StatusCode < 300)
 
-	// Failure case (either error or bad status code)
-	backend.FailureCount += 1
-	backend.Healthy = false
-
-	// Exponential backoff with upper limit of 60 seconds
-	if backend.BackoffTime < 60*time.Second {
-		backend.BackoffTime *= 2
-	}
+	backend.UpdateHealth(success)
 }

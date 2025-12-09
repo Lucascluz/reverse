@@ -24,8 +24,9 @@ const (
 	DefaultMaxConns = 100
 
 	// Health check defaults
-	DefaultTimeout  = 5 * time.Second
-	DefaultInterval = 10 * time.Second
+	DefaultTimeout             = 5 * time.Second
+	DefaultInterval            = 10 * time.Second
+	DefaultMaxConcurrentChecks = 10
 
 	// Load balancer defaults
 	DefaultLoadBalancerType = "round-robin"
@@ -109,6 +110,10 @@ func (c *Config) applyDefaults() error {
 
 	if c.Pool.HealthChecker.Timeout == 0 {
 		c.Pool.HealthChecker.Timeout = DefaultTimeout
+	}
+
+	if c.Pool.HealthChecker.MaxConcurrentChecks == 0 {
+		c.Pool.HealthChecker.MaxConcurrentChecks = DefaultMaxConcurrentChecks
 	}
 
 	// Apply defaults for load balancer config

@@ -18,7 +18,7 @@ type Logger struct {
 }
 
 // NewLogger creates a new logger with the given prefix
-func NewLogger(prefix string) *Logger {
+func New(prefix string) *Logger {
 	// Good for container logs - write to stdout
 	log.SetOutput(os.Stdout)
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
@@ -51,7 +51,7 @@ func LoggerFromContext(ctx context.Context) *Logger {
 		}
 	}
 	// Fallback logger if none in context
-	return NewLogger("fallback")
+	return New("fallback")
 }
 
 // LoggerToContext stores the logger in the context

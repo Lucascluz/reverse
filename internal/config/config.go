@@ -38,8 +38,9 @@ type BackendConfig struct {
 }
 
 type HealthCheckerConfig struct {
-	Interval time.Duration `yaml:"interval"`
-	Timeout  time.Duration `yaml:"timeout"`
+	MaxConcurrentChecks int           `yaml:"max_concurrent_checks"`
+	Interval            time.Duration `yaml:"interval"`
+	Timeout             time.Duration `yaml:"timeout"`
 }
 
 type LoadBalancerConfig struct {

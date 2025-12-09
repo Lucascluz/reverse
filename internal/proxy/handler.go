@@ -23,7 +23,6 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// TODO: Implement proper load balancing strategy
 	nextTarget := p.pool.NextUrl()
 
 	outReq, err := http.NewRequest(r.Method, nextTarget+r.URL.Path, r.Body)
