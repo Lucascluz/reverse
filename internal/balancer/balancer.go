@@ -13,7 +13,6 @@ type Balancer interface {
 func New(backends []*backend.Backend, cfg config.LoadBalancerConfig) Balancer {
 	switch cfg.Type {
 	case "round-robin":
-		// Assume NewRoundRobin is a constructor that returns a Balancer or *roundRobinBalancer
 		return NewRoundRobin(backends)
 	default:
 		return NewRoundRobin(backends)

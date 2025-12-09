@@ -1,6 +1,7 @@
-package pool
+package checker
 
 import (
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -10,21 +11,22 @@ import (
 )
 
 type HealthChecker struct {
-	client *http.Client
-
 	maxConcurrentChecks int
 
+	client *http.Client
 	ticker *time.Ticker
 	stop   chan struct{}
 }
 
-func NewHealthChecker(cfg *config.HealthCheckerConfig) *HealthChecker {
+func New(cfg *config.HealthCheckerConfig) *HealthChecker {
 
 	// Defensive defaults: fallback to config package defaults when tests left values zero
 	var interval, timeout time.Duration
+	var maxConcurrentChecks int
 	if cfg == nil {
 		interval = config.DefaultInterval
 		timeout = config.DefaultTimeout
+		maxConcurrentChecks = config.DefaultMaxConcurrentChecks
 	} else {
 		interval = cfg.Interval
 		timeout = cfg.Timeout
@@ -34,19 +36,38 @@ func NewHealthChecker(cfg *config.HealthCheckerConfig) *HealthChecker {
 		if timeout <= 0 {
 			timeout = config.DefaultTimeout
 		}
+		if cfg.MaxConcurrentChecks <= 0 {
+			maxConcurrentChecks = config.DefaultMaxConcurrentChecks
+		}
 	}
 
-	hc := &HealthChecker{
-		client: &http.Client{Timeout: timeout},
-		ticker: time.NewTicker(interval),
-		stop:   make(chan struct{}),
+	client := &http.Client{
+		Timeout: timeout,
+		Transport: &http.Transport{
+			DialContext: (&net.Dialer{
+				Timeout:   2 * time.Second,
+				KeepAlive: 10 * time.Second,
+			}).DialContext,
+			MaxIdleConns:          20,
+			MaxIdleConnsPerHost:   4,
+			IdleConnTimeout:       5 * time.Second,
+			TLSHandshakeTimeout:   5 * time.Second,
+			ResponseHeaderTimeout: 1 * time.Second,
+			DisableKeepAlives:     false,
+		},
 	}
-	return hc
+
+	return &HealthChecker{
+		maxConcurrentChecks: maxConcurrentChecks,
+		client:              client,
+		ticker:              time.NewTicker(interval),
+		stop:                make(chan struct{}),
+	}
 }
 
 func (hc *HealthChecker) Start(backends []*backend.Backend, updateReady func()) {
 
-	// Semaphore
+	// Semaphore concurrent checks
 	sem := make(chan struct{}, hc.maxConcurrentChecks)
 
 	for {

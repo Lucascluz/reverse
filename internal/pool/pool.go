@@ -6,15 +6,16 @@ import (
 
 	"github.com/Lucascluz/reverse/internal/backend"
 	"github.com/Lucascluz/reverse/internal/balancer"
+	"github.com/Lucascluz/reverse/internal/checker"
 	"github.com/Lucascluz/reverse/internal/config"
 )
 
 type Pool struct {
-	backends []*backend.Backend
-
+	backends      []*backend.Backend
 	loadBalancer  balancer.Balancer
-	healthChecker *HealthChecker
-	mu            sync.RWMutex
+	healthChecker *checker.HealthChecker
+
+	mu sync.RWMutex
 }
 
 func New(cfg *config.PoolConfig, updateReady func()) *Pool {
@@ -27,16 +28,28 @@ func New(cfg *config.PoolConfig, updateReady func()) *Pool {
 
 	loadBalancer := balancer.New(backends, cfg.LoadBalancer)
 
+	healthChecker := checker.New(&cfg.HealthChecker)
+
 	pool := &Pool{
 		backends:      backends,
-		healthChecker: NewHealthChecker(&cfg.HealthChecker),
 		loadBalancer:  loadBalancer,
+		healthChecker: healthChecker,
 		mu:            sync.RWMutex{},
 	}
 
-	go pool.healthChecker.Start(backends, updateReady)
+	go pool.Start(updateReady)
 
 	return pool
+}
+
+// Start starts the pool and its health checker
+func (p *Pool) Start(updateReady func()) {
+	p.healthChecker.Start(p.backends, updateReady)
+}
+
+// Stop stops the pool and its health checker
+func (p *Pool) Stop() {
+	p.healthChecker.Stop()
 }
 
 // A pool is ready if there is at least one healthy backend
