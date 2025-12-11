@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Lucascluz/reverse/internal/logger"
+	"github.com/Lucascluz/reverse/internal/observability"
 )
 
 // Logging wraps an HTTP handler with request/response logging
-func Logging(baseLogger *logger.Logger, next http.Handler) http.Handler {
+func Logging(baseLogger *observability.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Generate or propagate request ID
 		reqID := r.Header.Get("X-Request-ID")
@@ -19,7 +19,7 @@ func Logging(baseLogger *logger.Logger, next http.Handler) http.Handler {
 
 		// Create request-scoped logger and add to context
 		requestLogger := baseLogger.WithRequestFields(reqID, r.Method, r.URL.Path)
-		ctx := logger.LoggerToContext(r.Context(), requestLogger)
+		ctx := observability.LoggerToContext(r.Context(), requestLogger)
 		r = r.WithContext(ctx)
 
 		// Wrap response writer to capture metadata

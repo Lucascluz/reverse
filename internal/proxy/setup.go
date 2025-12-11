@@ -5,10 +5,9 @@ import (
 	"net/http"
 
 	"github.com/Lucascluz/reverse/internal/config"
-	"github.com/Lucascluz/reverse/internal/logger"
-	"github.com/Lucascluz/reverse/internal/ratelimiter"
-
+	"github.com/Lucascluz/reverse/internal/observability"
 	"github.com/Lucascluz/reverse/internal/proxy/middleware"
+	"github.com/Lucascluz/reverse/internal/ratelimiter"
 )
 
 // Setup encapsulates the complete proxy initialization
@@ -40,7 +39,7 @@ func (s *Setup) Proxy() *Proxy {
 func (s *Setup) Handler() (http.Handler, error) {
 
 	// Create logger
-	log := logger.New("proxy")
+	log := observability.NewLogger("proxy")
 
 	// Create rate limiter
 	limiter := ratelimiter.New(s.cfg.RateLimiter)

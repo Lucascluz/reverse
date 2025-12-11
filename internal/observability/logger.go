@@ -1,4 +1,4 @@
-package logger
+package observability
 
 import (
 	"context"
@@ -18,7 +18,7 @@ type Logger struct {
 }
 
 // NewLogger creates a new logger with the given prefix
-func New(prefix string) *Logger {
+func NewLogger(prefix string) *Logger {
 	// Good for container logs - write to stdout
 	log.SetOutput(os.Stdout)
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
@@ -51,7 +51,7 @@ func LoggerFromContext(ctx context.Context) *Logger {
 		}
 	}
 	// Fallback logger if none in context
-	return New("fallback")
+	return NewLogger("fallback")
 }
 
 // LoggerToContext stores the logger in the context
