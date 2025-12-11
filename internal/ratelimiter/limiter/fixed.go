@@ -17,7 +17,7 @@ type Fixed struct {
 	mu       sync.Mutex
 }
 
-func newFixed(cfg config.RateLimiterConfig) *Fixed {
+func NewFixed(cfg config.RateLimiterConfig) *Fixed {
 	l := &Fixed{
 		limit:   cfg.Limit,
 		counter: atomic.Int32{},

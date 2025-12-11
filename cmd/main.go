@@ -11,47 +11,46 @@ import (
 	"time"
 
 	"github.com/Lucascluz/reverse/internal/config"
-	"github.com/Lucascluz/reverse/internal/ip"
-	"github.com/Lucascluz/reverse/internal/limiter"
-	"github.com/Lucascluz/reverse/internal/logger"
-	"github.com/Lucascluz/reverse/internal/middleware"
 	"github.com/Lucascluz/reverse/internal/proxy"
 )
 
 func main() {
-
 	// Load configuration
 	cfg, err := config.Load("./config.yaml")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Setup proxy
-	p := proxy.New(cfg)
-
-	// Create base logger and wrap proxy with logging middleware
-	logger := logger.New("proxy")
-
-	limiter := limiter.New(cfg.RateLimiter)
-
-	extractor, err := ip.NewExtractor(cfg.RateLimiter.TrustedProxies)
+	// Initialize proxy with config
+	setup, err := proxy.NewSetup(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	handler := middleware.Logging(logger, p)
+	// Build the complete handler with middleware
+	handler, err := setup.Handler()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	handler = middleware.Limiting(limiter, extractor, handler)
+	// Get the proxy instance
+	p := setup.Proxy()
 
 	// Setup servers
 	proxySrv := &http.Server{
-		Addr:    ":" + p.Port,
-		Handler: handler,
+		Addr:         ":" + p.Port,
+		Handler:      handler,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  90 * time.Second,
 	}
 
 	probeSrv := &http.Server{
-		Addr:    ":" + p.ProbePort,
-		Handler: p.ProbeMux(),
+		Addr:         ":" + p.ProbePort,
+		Handler:      p.ProbeMux(),
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 5 * time.Second,
+		IdleTimeout:  5 * time.Second,
 	}
 
 	// Run servers
@@ -74,7 +73,7 @@ func main() {
 		}
 	}()
 
-	// Gracefull shutdown
+	// Graceful shutdown
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	<-stop

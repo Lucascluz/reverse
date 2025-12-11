@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Lucascluz/reverse/internal/middleware"
+	"github.com/Lucascluz/reverse/internal/proxy/middleware"
 )
 
 // Implement http.Handler interface directly

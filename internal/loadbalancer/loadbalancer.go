@@ -6,8 +6,8 @@ import (
 	"sync/atomic"
 
 	"github.com/Lucascluz/reverse/internal/config"
+	"github.com/Lucascluz/reverse/internal/loadbalancer/balancer"
 	"github.com/Lucascluz/reverse/internal/loadbalancer/pool"
-	"github.com/Lucascluz/reverse/internal/loadbalancer/strategy"
 )
 
 type LoadBalancer struct {
@@ -79,11 +79,11 @@ func (lb *LoadBalancer) IsReady() bool {
 	return lb.ready.Load()
 }
 
-func newBalancingStrategy(backends []*pool.Backend, strategyType string) Balancer {
-	switch strategyType {
+func newBalancingStrategy(backends []*pool.Backend, balancerType string) Balancer {
+	switch balancerType {
 	case "round-robin":
-		return strategy.NewRoundRobin(backends)
+		return balancer.NewRoundRobin(backends)
 	default:
-		return strategy.NewRoundRobin(backends)
+		return balancer.NewRoundRobin(backends)
 	}
 }

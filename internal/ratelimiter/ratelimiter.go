@@ -1,12 +1,11 @@
-package limiter
+package ratelimiter
 
 import (
 	"time"
 
 	"github.com/Lucascluz/reverse/internal/config"
+	"github.com/Lucascluz/reverse/internal/ratelimiter/limiter"
 )
-
-var TrustedProxies []string
 
 type Limiter interface {
 	// Allow checks if a request from 'key' (IP/User) is permitted.
@@ -18,7 +17,7 @@ type Limiter interface {
 func New(cfg config.RateLimiterConfig) Limiter {
 	switch cfg.Type {
 	case "fixed-window":
-		return newFixed(cfg)
+		return limiter.NewFixed(cfg)
 	}
-	return newFixed(cfg)
+	return limiter.NewFixed(cfg)
 }

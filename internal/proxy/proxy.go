@@ -12,6 +12,7 @@ import (
 )
 
 type Proxy struct {
+	
 	Host      string
 	Port      string
 	ProbePort string

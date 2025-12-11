@@ -4,11 +4,10 @@ import (
 	"net/http"
 	"strconv"
 
-	extractor "github.com/Lucascluz/reverse/internal/ip"
-	"github.com/Lucascluz/reverse/internal/limiter"
+	"github.com/Lucascluz/reverse/internal/ratelimiter"
 )
 
-func Limiting(l limiter.Limiter, e *extractor.Extractor, next http.Handler) http.Handler {
+func RateLimiting(l ratelimiter.Limiter, e *ratelimiter.Extractor, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		key := e.Extract(r)
