@@ -30,6 +30,10 @@ const (
 
 	// Load balancer defaults
 	DefaultLoadBalancerType = "round-robin"
+
+	// Rate limiter defaults
+	DefaultRateLimiterType = "fixed-window"
+	DefaultRateLimit       = 5 // Requests per second
 )
 
 func (c *Config) applyDefaults() error {
@@ -119,6 +123,15 @@ func (c *Config) applyDefaults() error {
 	// Apply defaults for load balancer config
 	if c.Pool.LoadBalancer.Type == "" {
 		c.Pool.LoadBalancer.Type = DefaultLoadBalancerType
+	}
+
+	// Apply defaults for rate limiter config
+	if c.RateLimiter.Type == "" {
+		c.RateLimiter.Type = DefaultRateLimiterType
+	}
+
+	if c.RateLimiter.Limit == 0 {
+		c.RateLimiter.Limit = DefaultRateLimit
 	}
 
 	return nil

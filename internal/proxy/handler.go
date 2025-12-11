@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -23,7 +24,11 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	nextTarget := p.pool.NextUrl()
+	nextTarget, err := p.pool.NextUrl()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error getting next target: %v", err), http.StatusInternalServerError)
+		return
+	}
 
 	outReq, err := http.NewRequest(r.Method, nextTarget+r.URL.Path, r.Body)
 	if err != nil {

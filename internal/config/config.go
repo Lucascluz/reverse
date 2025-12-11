@@ -5,9 +5,10 @@ import (
 )
 
 type Config struct {
-	Proxy ProxyConfig `yaml:"proxy"`
-	Cache CacheConfig `yaml:"cache"`
-	Pool  PoolConfig  `yaml:"pool"`
+	Proxy       ProxyConfig       `yaml:"proxy"`
+	Cache       CacheConfig       `yaml:"cache"`
+	Pool        PoolConfig        `yaml:"pool"`
+	RateLimiter RateLimiterConfig `yaml:"rate_limiter"`
 }
 
 type ProxyConfig struct {
@@ -45,4 +46,10 @@ type HealthCheckerConfig struct {
 
 type LoadBalancerConfig struct {
 	Type string `yaml:"type"`
+}
+
+type RateLimiterConfig struct {
+	Type           string   `yaml:"type"`
+	Limit          int      `yaml:"limit"`
+	TrustedProxies []string `yaml:"trusted_proxies"`
 }

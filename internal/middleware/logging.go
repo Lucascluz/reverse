@@ -7,18 +7,6 @@ import (
 	"github.com/Lucascluz/reverse/internal/logger"
 )
 
-// CacheDecisionWriter allows handlers to communicate cache decisions to middleware
-type CacheDecisionWriter interface {
-	SetCacheDecision(status, reason, backend string)
-}
-
-// SetCacheDecision implements CacheDecisionWriter interface
-func (r *ResponseRecorder) SetCacheDecision(status, reason, backend string) {
-	r.cacheStatus = status
-	r.cacheReason = reason
-	r.cacheBackend = backend
-}
-
 // Logging wraps an HTTP handler with request/response logging
 func Logging(baseLogger *logger.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -4,6 +4,11 @@ import (
 	"net/http"
 )
 
+// CacheDecisionWriter allows handlers to communicate cache decisions to middleware
+type CacheDecisionWriter interface {
+	SetCacheDecision(status, reason, backend string)
+}
+
 // ResponseRecorder wraps http.ResponseWriter to capture response metadata
 type ResponseRecorder struct {
 	http.ResponseWriter
@@ -20,6 +25,13 @@ func NewResponseRecorder(w http.ResponseWriter) *ResponseRecorder {
 		ResponseWriter: w,
 		statusCode:     http.StatusOK, // default status
 	}
+}
+
+// SetCacheDecision implements CacheDecisionWriter interface
+func (r *ResponseRecorder) SetCacheDecision(status, reason, backend string) {
+	r.cacheStatus = status
+	r.cacheReason = reason
+	r.cacheBackend = backend
 }
 
 // WriteHeader captures the status code before writing

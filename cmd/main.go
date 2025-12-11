@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/Lucascluz/reverse/internal/config"
+	"github.com/Lucascluz/reverse/internal/ip"
+	"github.com/Lucascluz/reverse/internal/limiter"
 	"github.com/Lucascluz/reverse/internal/logger"
 	"github.com/Lucascluz/reverse/internal/middleware"
 	"github.com/Lucascluz/reverse/internal/proxy"
@@ -30,7 +32,16 @@ func main() {
 	// Create base logger and wrap proxy with logging middleware
 	logger := logger.New("proxy")
 
+	limiter := limiter.New(cfg.RateLimiter)
+
+	extractor, err := ip.NewExtractor(cfg.RateLimiter.TrustedProxies)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	handler := middleware.Logging(logger, p)
+
+	handler = middleware.Limiting(limiter, extractor, handler)
 
 	// Setup servers
 	proxySrv := &http.Server{

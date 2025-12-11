@@ -1,6 +1,7 @@
 package pool
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -65,16 +66,20 @@ func (p *Pool) IsReady() bool {
 	return false
 }
 
-func (p *Pool) NextUrl() string {
+func (p *Pool) NextUrl() (string, error) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
 	// TODO: Define retry policy for backend selection
 	if next := p.loadBalancer.Next(); next != nil {
-		return next.Url
+		return next.Url, nil
 	}
 
 	time.Sleep(3 * time.Second)
+	next := p.loadBalancer.Next()
+	if next != nil {
+		return next.Url, nil
+	}
 
-	return p.loadBalancer.Next().Url
+	return "", fmt.Errorf("no healthy backend available")
 }
