@@ -1,7 +1,6 @@
 package proxy
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -24,13 +23,21 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	nextTarget, err := p.pool.NextUrl()
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error getting next target: %v", err), http.StatusInternalServerError)
+	// Check if load balancer is ready
+	if !p.loadBalancer.IsReady() {
+		http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
 		return
 	}
 
-	outReq, err := http.NewRequest(r.Method, nextTarget+r.URL.Path, r.Body)
+	// Get next backend from load balancer
+	backend, err := p.loadBalancer.Next()
+	if err != nil {
+		http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+		return
+	}
+
+	// Create new request with backend URL and original request details
+	outReq, err := http.NewRequest(r.Method, backend.Url+r.URL.Path, r.Body)
 	if err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
@@ -38,6 +45,10 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Copy headers but STRIP hop-by-hop headers
 	copyHeader(outReq.Header, r.Header)
+
+	// Increment backend connection count
+	backend.IncrementConnections()
+	defer backend.DecrementConnections()
 
 	resp, err := p.client.Do(outReq)
 	if err != nil {

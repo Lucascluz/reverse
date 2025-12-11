@@ -4,10 +4,7 @@
 # - Durations use Go's time.ParseDuration format (e.g. "10s", "5m", "24h").
 # - Backend `health_url` may be absolute (https://host/health) or a relative path ("/health").
 #   If relative, it will be joined to the backend `url` (trim-righting any trailing slash).
-# - The names of keys must match the config struct tags in the code:
-#   Proxy: host, port, probe_port
-#   Cache: disabled, default_ttl, max_age, purge_interval
-#   Pool: backends, health_checker, load_balancer
+# - The names of keys must match the config struct tags in the code.
 #
 # Before running, ensure this file is loaded by your binary (e.g. via -config or env-driven loader).
 
@@ -17,87 +14,116 @@ proxy:
   port: "8080"
 
   # Port to expose liveness/readiness probes (separate from main listen port)
-  # Default in code: 8085 (if left empty). Example override:
   probe_port: "8085"
+
+  # Default TTL used when no explicit cache headers found
+  # Example: 5m (5 minutes)
+  default_ttl: 5m
+
+  # Maximum allowed TTL for any cached entry
+  # Example: 24h (24 hours)
+  max_age: 24h
 
 cache:
   # Disable caching entirely
   disabled: false
 
-  # Default TTL used when no explicit cache headers found (e.g. no Cache-Control/Expires)
-  # Example: 5m (5 minutes)
-  default_ttl: 5m
-
-  # Maximum allowed TTL for any cached entry (caps TTL determined from backend headers)
-  # Example: 24h (24 hours)
-  max_age: 24h
-
   # How frequently the in-memory cache should purge expired entries
   # Example: 10m (10 minutes)
   purge_interval: 10m
 
-pool:
-  # Backend pool configuration - contains backends, health checker and load balancer settings
+load_balancer:
+  # Type of load balancing to use. Supported values:
+  # - "round-robin" (default)
+  # - "weighted-round-robin" (uses per-backend `weight`)
+  # - "least-connections" (requires connection tracking)
+  type: "round-robin"
 
-  # Health checker configuration
-  health_checker:
-    # How often to run health checks against each backend
-    # Example: 10s
-    interval: 10s
+  pool:
+    # Health checker configuration
+    health_checker:
+      # How often to run health checks against each backend
+      # Example: 10s
+      interval: 10s
 
-    # How long to wait for a health check response before considering it a timeout
-    # Example: 2s
-    timeout: 2s
+      # How long to wait for a health check response before considering it a timeout
+      # Example: 2s
+      timeout: 2s
 
-  # Load balancer configuration
-  load_balancer:
-    # Type of load balancing to use. Supported/expected values:
-    # - "round-robin" (default)
-    # - "least-connections"
-    # - "weighted" (requires per-backend `weight` to be meaningful)
-    #
-    # Default in code: "round-robin" if empty.
-    type: "round-robin"
+      # Maximum number of concurrent health checks
+      # Example: 5
+      max_concurrent_checks: 5
 
-  # Backends list. At least one backend MUST be present (the code validates this).
-  backends:
-    - name: "backend-1"                     # optional; defaults to "backend<N>" if omitted
-      url: "http://localhost:8081"          # required
-      # health_url can be absolute or relative (e.g. "/health"). If omitted, defaults to <url>/health
-      health_url: "/health"
-      weight: 1                             # optional, default: 1
-      max_conns: 100                        # optional, default: 100
+    # Backend pool configuration - list of backends to load balance
+    backends:
+      - name: "backend-1"
+        url: "http://localhost:8081"
+        # health_url can be absolute or relative (e.g. "/health")
+        # If omitted, defaults to <url>/health
+        health_url: "/health"
+        weight: 1
+        max_conns: 100
 
-    - name: "backend-2"
-      url: "http://localhost:8082"
-      # absolute health check URL (overrides auto-built path)
-      health_url: "http://localhost:8082/health"
-      weight: 1
-      max_conns: 100
+      - name: "backend-2"
+        url: "http://localhost:8082"
+        # absolute health check URL
+        health_url: "http://localhost:8082/health"
+        weight: 1
+        max_conns: 100
 
-    - name: "backend-3"
-      url: "http://10.0.0.5:8080"
-      # health_url omitted -> will be computed from url as "<url>/health"
-      weight: 2    # useful when using weighted LB
-      max_conns: 200
+      - name: "backend-3"
+        url: "http://10.0.0.5:8080"
+        # health_url omitted -> will be computed as "<url>/health"
+        weight: 2
+        max_conns: 200
 
-# Example notes and recommendations
+rate_limiter:
+  # Type of rate limiting to use
+  # Supported values: "per-ip" (default)
+  type: "per-ip"
+
+  # Requests per second limit
+  limit: 100
+
+  # List of IPs to trust for X-Forwarded-For headers
+  # If client IP is in this list, use the X-Forwarded-For value instead
+  trusted_proxies:
+    - "127.0.0.1"
+    - "::1"
+    # Add your reverse proxy IPs if running behind another proxy
+    # - "10.0.0.0/8"
+
+# Configuration Notes and Best Practices:
 #
-# - Keep a single canonical default branch (main/master) protected and use short-lived
-#   feature branches for changes. This file is just an example; adapt ports and hosts to your
-#   deployment environment.
+# Proxy Configuration:
+#   - host: Bind address ("0.0.0.0" for all interfaces, "127.0.0.1" for localhost only)
+#   - port: Main proxy port
+#   - probe_port: Separate port for health/readiness probes
+#   - default_ttl: Cache TTL when backend has no Cache-Control header
+#   - max_age: Maximum cache duration regardless of backend headers
 #
-# - If you rely on cookies or vary headers for cache correctness, enable/implement the
-#   Vary header verification and avoid caching responses that include Set-Cookie unless
-#   explicitly intended.
+# Cache Configuration:
+#   - disabled: Set to true to completely disable caching (useful for testing)
+#   - purge_interval: How often to clean up expired entries from memory
 #
-# - For production, use health checks that return 200 for OK and non-200 for degraded/backoff.
-#   Tune health_checker.interval and health_checker.timeout according to the backend responsiveness.
+# Load Balancer Configuration:
+#   - type: Algorithm for selecting backends
+#     * "round-robin": Simple round-robin distribution
+#     * "weighted-round-robin": Uses weight field (1-100 typical)
+#     * "least-connections": Selects backend with fewest active connections
 #
-# - When using "least-connections" or "weighted" load balancers, ensure `max_conns` and
-#   `weight` are configured for each backend appropriately.
+# Pool Configuration:
+#   - health_checker.interval: Check interval (10s recommended)
+#   - health_checker.timeout: Response timeout (2s recommended)
+#   - health_checker.max_concurrent_checks: Parallel checks (5+ recommended)
 #
-# - If you want to disable cache for testing, set `cache.disabled: true`.
+# Backend Configuration:
+#   - url: Base URL of the backend service
+#   - health_url: Path to health check endpoint (relative or absolute)
+#   - weight: Importance in weighted balancing (1-100)
+#   - max_conns: Maximum simultaneous connections allowed
 #
-# - If you need TLS between proxy and backend, change backend URLs to https:// and ensure
-#   your runtime HTTP client/trust store is configured accordingly.
+# Rate Limiter Configuration:
+#   - type: Limiting strategy
+#   - limit: Requests per second per IP (adjust based on backend capacity)
+#   - trusted_proxies: IPs to trust for X-Forwarded-For header

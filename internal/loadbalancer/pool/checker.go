@@ -1,4 +1,4 @@
-package checker
+package pool
 
 import (
 	"net"
@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Lucascluz/reverse/internal/backend"
 	"github.com/Lucascluz/reverse/internal/config"
 )
 
@@ -18,7 +17,7 @@ type HealthChecker struct {
 	stop   chan struct{}
 }
 
-func New(cfg *config.HealthCheckerConfig) *HealthChecker {
+func NewHealthChecker(cfg *config.HealthCheckerConfig) *HealthChecker {
 
 	// Defensive defaults: fallback to config package defaults when tests left values zero
 	var interval, timeout time.Duration
@@ -65,7 +64,7 @@ func New(cfg *config.HealthCheckerConfig) *HealthChecker {
 	}
 }
 
-func (hc *HealthChecker) Start(backends []*backend.Backend, updateReady func()) {
+func (hc *HealthChecker) Start(backends []*Backend, updateReady func()) {
 
 	// Semaphore concurrent checks
 	sem := make(chan struct{}, hc.maxConcurrentChecks)
@@ -79,7 +78,7 @@ func (hc *HealthChecker) Start(backends []*backend.Backend, updateReady func()) 
 			for _, b := range backends {
 				wg.Add(1)
 
-				go func(backend *backend.Backend) {
+				go func(backend *Backend) {
 					defer wg.Done()
 
 					// Claim a spot
@@ -108,7 +107,7 @@ func (hc *HealthChecker) Stop() {
 	close(hc.stop)
 }
 
-func healthCheck(client *http.Client, backend *backend.Backend) {
+func healthCheck(client *http.Client, backend *Backend) {
 
 	// If backend is backed off, abort current health check
 	if backend.IsBackedOff() {

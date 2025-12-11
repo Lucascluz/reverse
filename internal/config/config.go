@@ -5,10 +5,10 @@ import (
 )
 
 type Config struct {
-	Proxy       ProxyConfig       `yaml:"proxy"`
-	Cache       CacheConfig       `yaml:"cache"`
-	Pool        PoolConfig        `yaml:"pool"`
-	RateLimiter RateLimiterConfig `yaml:"rate_limiter"`
+	Proxy        ProxyConfig        `yaml:"proxy"`
+	Cache        CacheConfig        `yaml:"cache"`
+	LoadBalancer LoadBalancerConfig `yaml:"load_balancer"`
+	RateLimiter  RateLimiterConfig  `yaml:"rate_limiter"`
 }
 
 type ProxyConfig struct {
@@ -24,10 +24,14 @@ type CacheConfig struct {
 	PurgeInterval time.Duration `yaml:"purge_interval"`
 }
 
+type LoadBalancerConfig struct {
+	Type string     `yaml:"type"`
+	Pool PoolConfig `yaml:"pool"`
+}
+
 type PoolConfig struct {
 	Backends      []BackendConfig     `yaml:"backends"`
 	HealthChecker HealthCheckerConfig `yaml:"health_checker"`
-	LoadBalancer  LoadBalancerConfig  `yaml:"load_balancer"`
 }
 
 type BackendConfig struct {
@@ -42,10 +46,6 @@ type HealthCheckerConfig struct {
 	MaxConcurrentChecks int           `yaml:"max_concurrent_checks"`
 	Interval            time.Duration `yaml:"interval"`
 	Timeout             time.Duration `yaml:"timeout"`
-}
-
-type LoadBalancerConfig struct {
-	Type string `yaml:"type"`
 }
 
 type RateLimiterConfig struct {

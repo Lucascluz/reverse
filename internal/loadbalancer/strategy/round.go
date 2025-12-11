@@ -1,21 +1,21 @@
-package balancer
+package strategy
 
 import (
 	"sync/atomic"
 
-	"github.com/Lucascluz/reverse/internal/backend"
+	"github.com/Lucascluz/reverse/internal/loadbalancer/pool"
 )
 
 type roundRobin struct {
-	backends []*backend.Backend
+	backends []*pool.Backend
 	index    uint64 // Changed to uint64 for atomic operations
 }
 
-func NewRoundRobin(backends []*backend.Backend) *roundRobin {
+func NewRoundRobin(backends []*pool.Backend) *roundRobin {
 	return &roundRobin{backends: backends, index: 0}
 }
 
-func (rr *roundRobin) Next() *backend.Backend {
+func (rr *roundRobin) Next() *pool.Backend {
 	n := len(rr.backends)
 	if n == 0 {
 		return nil

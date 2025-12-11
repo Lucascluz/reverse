@@ -1,4 +1,4 @@
-package backend
+package pool
 
 import (
 	"sync"
@@ -25,7 +25,7 @@ type Backend struct {
 	mu sync.RWMutex
 }
 
-func New(cfg config.BackendConfig) *Backend {
+func NewBackend(cfg config.BackendConfig) *Backend {
 	return &Backend{
 		Name:      cfg.Name,
 		Url:       cfg.Url,
@@ -86,5 +86,41 @@ func (b *Backend) UpdateHealth(success bool) {
 			b.backoffTime *= 2
 		}
 	}
+}
 
+// IsAtCapacity returns true if backend reached max connections
+func (b *Backend) IsAtCapacity() bool {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	if b.MaxConns <= 0 {
+		// No limit
+		return false
+	}
+
+	return b.activeConns >= b.MaxConns
+}
+
+// IncrementConnections increments the active connection count
+func (b *Backend) IncrementConnections() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.activeConns++
+	b.totalRequests++
+}
+
+// DecrementConnections decrements the active connection count
+func (b *Backend) DecrementConnections() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.activeConns > 0 {
+		b.activeConns--
+	}
+}
+
+// GetActiveConns returns current active connection count
+func (b *Backend) GetActiveConns() int {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	return b.activeConns
 }

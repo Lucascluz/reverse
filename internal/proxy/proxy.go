@@ -8,7 +8,7 @@ import (
 
 	"github.com/Lucascluz/reverse/internal/cache"
 	"github.com/Lucascluz/reverse/internal/config"
-	"github.com/Lucascluz/reverse/internal/pool"
+	"github.com/Lucascluz/reverse/internal/loadbalancer"
 )
 
 type Proxy struct {
@@ -18,8 +18,9 @@ type Proxy struct {
 
 	client      *http.Client
 	probeClient *http.Client
-	pool        *pool.Pool
-	cache       cache.Cache
+
+	loadBalancer *loadbalancer.LoadBalancer
+	cache        cache.Cache
 
 	defaultTTL time.Duration
 	maxAge     time.Duration
@@ -76,13 +77,12 @@ func New(cfg *config.Config) *Proxy {
 		ready: atomic.Bool{},
 	}
 
-	// Create pool with readiness callback
-	proxy.pool = pool.New(&cfg.Pool, func() {
-		proxy.SetReady(proxy.pool.IsReady())
+	proxy.loadBalancer = loadbalancer.New(&cfg.LoadBalancer, func(ready bool) {
+		proxy.ready.Store(ready)
 	})
 
-	// Initial readiness (will be updated by callback soon)
-	proxy.ready.Store(proxy.pool.IsReady())
+	// Set initial readiness
+	proxy.ready.Store(proxy.loadBalancer.IsReady())
 
 	return proxy
 }

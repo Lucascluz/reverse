@@ -68,18 +68,18 @@ func (c *Config) applyDefaults() error {
 	}
 
 	// Apply defaults for backend pool config
-	if c.Pool.Backends == nil {
+	if c.LoadBalancer.Pool.Backends == nil {
 		return fmt.Errorf("backend pool config is missing")
 	}
 
-	if len(c.Pool.Backends) == 0 {
+	if len(c.LoadBalancer.Pool.Backends) == 0 {
 		return fmt.Errorf("no backends configured")
 	}
 
 	// Apply defaults for backend config
-	for i := range c.Pool.Backends {
+	for i := range c.LoadBalancer.Pool.Backends {
 		// take pointer to element so we mutate the slice element directly
-		b := &c.Pool.Backends[i]
+		b := &c.LoadBalancer.Pool.Backends[i]
 
 		if b.Name == "" {
 			b.Name = DefaultName + strconv.Itoa(i)
@@ -108,21 +108,21 @@ func (c *Config) applyDefaults() error {
 	}
 
 	// Apply defaults for health checker config
-	if c.Pool.HealthChecker.Interval == 0 {
-		c.Pool.HealthChecker.Interval = DefaultInterval
+	if c.LoadBalancer.Pool.HealthChecker.Interval == 0 {
+		c.LoadBalancer.Pool.HealthChecker.Interval = DefaultInterval
 	}
 
-	if c.Pool.HealthChecker.Timeout == 0 {
-		c.Pool.HealthChecker.Timeout = DefaultTimeout
+	if c.LoadBalancer.Pool.HealthChecker.Timeout == 0 {
+		c.LoadBalancer.Pool.HealthChecker.Timeout = DefaultTimeout
 	}
 
-	if c.Pool.HealthChecker.MaxConcurrentChecks == 0 {
-		c.Pool.HealthChecker.MaxConcurrentChecks = DefaultMaxConcurrentChecks
+	if c.LoadBalancer.Pool.HealthChecker.MaxConcurrentChecks == 0 {
+		c.LoadBalancer.Pool.HealthChecker.MaxConcurrentChecks = DefaultMaxConcurrentChecks
 	}
 
 	// Apply defaults for load balancer config
-	if c.Pool.LoadBalancer.Type == "" {
-		c.Pool.LoadBalancer.Type = DefaultLoadBalancerType
+	if c.LoadBalancer.Type == "" {
+		c.LoadBalancer.Type = DefaultLoadBalancerType
 	}
 
 	// Apply defaults for rate limiter config
