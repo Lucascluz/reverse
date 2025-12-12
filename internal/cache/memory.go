@@ -75,6 +75,14 @@ func (c *inMemoryCache) Exists(key string) bool {
 	return exists
 }
 
+func (c *inMemoryCache) Stop() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.stop <- true
+	return nil
+}
+
 func (c *inMemoryCache) start() {
 	for {
 		select {

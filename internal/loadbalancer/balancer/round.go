@@ -8,11 +8,13 @@ import (
 
 type roundRobin struct {
 	backends []*pool.Backend
-	index    uint64 // Changed to uint64 for atomic operations
+	index    atomic.Int32
 }
 
 func NewRoundRobin(backends []*pool.Backend) *roundRobin {
-	return &roundRobin{backends: backends, index: 0}
+	return &roundRobin{
+		backends: backends,
+		index:    atomic.Int32{}}
 }
 
 func (rr *roundRobin) Next() *pool.Backend {
@@ -21,8 +23,8 @@ func (rr *roundRobin) Next() *pool.Backend {
 		return nil
 	}
 
-	val := atomic.AddUint64(&rr.index, 1)
-	idx := (val - 1) % uint64(n)
+	val := rr.index.Add(1)
+	idx := (val - 1) % int32(n)
 
 	return (rr.backends)[idx]
 }

@@ -3,7 +3,6 @@ package proxy
 import (
 	"net"
 	"net/http"
-	"sync/atomic"
 	"time"
 
 	"github.com/Lucascluz/reverse/internal/cache"
@@ -12,21 +11,16 @@ import (
 )
 
 type Proxy struct {
-	
 	Host      string
 	Port      string
 	ProbePort string
 
-	client      *http.Client
-	probeClient *http.Client
+	defaultTTL time.Duration
+	maxAge     time.Duration
+	client     *http.Client
 
 	loadBalancer *loadbalancer.LoadBalancer
 	cache        cache.Cache
-
-	defaultTTL time.Duration
-	maxAge     time.Duration
-
-	ready atomic.Bool
 }
 
 func New(cfg *config.Config) *Proxy {
@@ -44,19 +38,14 @@ func New(cfg *config.Config) *Proxy {
 		ExpectContinueTimeout: 1 * time.Second,
 	}
 
-	probeTransport := &http.Transport{
-		MaxIdleConns:        10,
-		MaxIdleConnsPerHost: 2,
-		IdleConnTimeout:     5 * time.Second,
-		TLSHandshakeTimeout: 5 * time.Second,
-		DisableKeepAlives:   false,
-	}
-
-	proxy := &Proxy{
+	return &Proxy{
 
 		Host:      cfg.Proxy.Host,
 		Port:      cfg.Proxy.Port,
 		ProbePort: cfg.Proxy.ProbePort,
+
+		defaultTTL: time.Duration(cfg.Proxy.DefaultTTL) * time.Second,
+		maxAge:     time.Duration(cfg.Proxy.MaxAge) * time.Second,
 
 		client: &http.Client{
 			Transport: transport,
@@ -66,32 +55,20 @@ func New(cfg *config.Config) *Proxy {
 			},
 		},
 
-		probeClient: &http.Client{
-			Transport: probeTransport,
-			Timeout:   1 * time.Second,
-		},
-		cache: cache.NewInMemoryCache(&cfg.Cache),
-
-		defaultTTL: time.Duration(cfg.Proxy.DefaultTTL) * time.Second,
-		maxAge:     time.Duration(cfg.Proxy.MaxAge) * time.Second,
-
-		ready: atomic.Bool{},
+		loadBalancer: loadbalancer.NewLoadBalancer(&cfg.LoadBalancer),
+		cache:        cache.NewCache(&cfg.Cache),
 	}
-
-	proxy.loadBalancer = loadbalancer.New(&cfg.LoadBalancer, func(ready bool) {
-		proxy.ready.Store(ready)
-	})
-
-	// Set initial readiness
-	proxy.ready.Store(proxy.loadBalancer.IsReady())
-
-	return proxy
-}
-
-func (p *Proxy) SetReady(v bool) {
-	p.ready.Store(v)
 }
 
 func (p *Proxy) IsReady() bool {
-	return p.ready.Load()
+	return p.loadBalancer.IsReady()
+}
+
+func (p *Proxy) SetReady(ready bool) {
+	p.loadBalancer.SetReady(ready)
+}
+
+// LoadBalancer returns the underlying LoadBalancer instance
+func (p *Proxy) LoadBalancer() *loadbalancer.LoadBalancer {
+	return p.loadBalancer
 }

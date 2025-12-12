@@ -1,0 +1,4 @@
+2025/12/12 00:06:39 [backend-2] Starting dummy server on :8082
+2025/12/12 00:06:39 [backend-2] Latency: 15ms, Error Rate: 0.0%
+2025/12/12 00:07:26 [backend-2] Received signal: interrupt
+2025/12/12 00:07:26 [backend-2] Server stopped

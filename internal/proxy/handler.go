@@ -37,7 +37,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create new request with backend URL and original request details
-	outReq, err := http.NewRequest(r.Method, backend.Url+r.URL.Path, r.Body)
+	outReq, err := http.NewRequest(r.Method, backend.Url()+r.URL.Path, r.Body)
 	if err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return

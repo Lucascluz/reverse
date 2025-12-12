@@ -22,24 +22,13 @@ type Balancer interface {
 	Next() *pool.Backend
 }
 
-func New(cfg *config.LoadBalancerConfig, onReadyChanged func(ready bool)) *LoadBalancer {
+func NewLoadBalancer(cfg *config.LoadBalancerConfig) *LoadBalancer {
 	lb := &LoadBalancer{
 		ready: atomic.Bool{},
 	}
 
 	// Create the pool with a callback that updates our readiness
-	lb.pool = pool.NewPool(&cfg.Pool, func() {
-		newReady := lb.pool.IsReady()
-		oldReady := lb.ready.Load()
-
-		// Only call callback if state changed
-		if newReady != oldReady {
-			lb.ready.Store(newReady)
-			if onReadyChanged != nil {
-				onReadyChanged(newReady)
-			}
-		}
-	})
+	lb.pool = pool.NewPool(&cfg.Pool)
 
 	// Create the balancing strategy
 	lb.balancer = newBalancingStrategy(lb.pool.Backends(), cfg.Type)
@@ -77,6 +66,16 @@ func (lb *LoadBalancer) Next() (*pool.Backend, error) {
 // IsReady returns true if the load balancer is ready to serve requests
 func (lb *LoadBalancer) IsReady() bool {
 	return lb.ready.Load()
+}
+
+// SetReady sets the readiness of the load balancer
+func (lb *LoadBalancer) SetReady(ready bool) {
+	lb.ready.Store(ready)
+}
+
+// Pool returns the underlying Pool instance
+func (lb *LoadBalancer) Pool() *pool.Pool {
+	return lb.pool
 }
 
 func newBalancingStrategy(backends []*pool.Backend, balancerType string) Balancer {

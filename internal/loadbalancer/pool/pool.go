@@ -7,13 +7,12 @@ import (
 )
 
 type Pool struct {
-	backends      []*Backend
-	healthChecker *HealthChecker
+	backends []*Backend
 
 	mu sync.RWMutex
 }
 
-func NewPool(cfg *config.PoolConfig, updateReady func()) *Pool {
+func NewPool(cfg *config.PoolConfig) *Pool {
 
 	backends := make([]*Backend, len(cfg.Backends))
 
@@ -21,40 +20,24 @@ func NewPool(cfg *config.PoolConfig, updateReady func()) *Pool {
 		backends[i] = NewBackend(backendCfg)
 	}
 
-	healthChecker := NewHealthChecker(&cfg.HealthChecker)
-
 	pool := &Pool{
-		backends:      backends,
-		healthChecker: healthChecker,
-		mu:            sync.RWMutex{},
+		backends: backends,
+		mu:       sync.RWMutex{},
 	}
-
-	go pool.Start(updateReady)
 
 	return pool
 }
 
-// Start starts the pool and its health checker
-func (p *Pool) Start(updateReady func()) {
-	p.healthChecker.Start(p.backends, updateReady)
-}
-
-// Stop stops the pool and its health checker
-func (p *Pool) Stop() {
-	p.healthChecker.Stop()
-}
-
-// A pool is ready if there is at least one healthy backend
 func (p *Pool) IsReady() bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
 	for _, backend := range p.backends {
-		if backend.IsHealthy() {
-			return true
+		if !backend.IsHealthy() {
+			return false
 		}
 	}
-	return false
+	return true
 }
 
 // Backends returns a copy of the backends slice

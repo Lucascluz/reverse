@@ -8,11 +8,11 @@ import (
 )
 
 type Backend struct {
-	Name      string
-	Url       string
-	HealthUrl string
-	Weight    int
-	MaxConns  int
+	name      string
+	url       string
+	healthUrl string
+	weight    int
+	maxConns  int
 
 	healthy         bool
 	lastCheck       time.Time
@@ -27,14 +27,14 @@ type Backend struct {
 
 func NewBackend(cfg config.BackendConfig) *Backend {
 	return &Backend{
-		Name:      cfg.Name,
-		Url:       cfg.Url,
-		HealthUrl: cfg.HealthUrl,
-		Weight:    cfg.Weight,
-		MaxConns:  cfg.MaxConns,
+		name:      cfg.Name,
+		url:       cfg.Url,
+		healthUrl: cfg.HealthUrl,
+		weight:    cfg.Weight,
+		maxConns:  cfg.MaxConns,
 
 		healthy:         false,
-		lastCheck:       time.Now(),
+		lastCheck:       time.Now().Add(-2 * time.Second), // Initialize to allow immediate health check
 		failureCount:    0,
 		backoffTime:     1 * time.Second,
 		activeConns:     0,
@@ -42,6 +42,18 @@ func NewBackend(cfg config.BackendConfig) *Backend {
 		avgResponseTime: time.Duration(0),
 		mu:              sync.RWMutex{},
 	}
+}
+
+func (b *Backend) Name() string {
+	return b.name
+}
+
+func (b *Backend) Url() string {
+	return b.url
+}
+
+func (b *Backend) HealthUrl() string {
+	return b.healthUrl
 }
 
 func (b *Backend) IsHealthy() bool {
@@ -93,12 +105,12 @@ func (b *Backend) IsAtCapacity() bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	if b.MaxConns <= 0 {
+	if b.maxConns <= 0 {
 		// No limit
 		return false
 	}
 
-	return b.activeConns >= b.MaxConns
+	return b.activeConns >= b.maxConns
 }
 
 // IncrementConnections increments the active connection count
@@ -118,8 +130,8 @@ func (b *Backend) DecrementConnections() {
 	}
 }
 
-// GetActiveConns returns current active connection count
-func (b *Backend) GetActiveConns() int {
+// ActiveConns returns current active connection count
+func (b *Backend) ActiveConns() int {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	return b.activeConns

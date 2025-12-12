@@ -55,6 +55,11 @@ load_balancer:
       max_concurrent_checks: 5
 
     # Backend pool configuration - list of backends to load balance
+    # NOTE: For testing with the provided load test scripts, ensure these addresses match:
+    #   - Backend 1: localhost:8081
+    #   - Backend 2: localhost:8082
+    #   - Backend 3: localhost:8083
+    # Start dummy backends with: ./scripts/test.sh backends-only
     backends:
       - name: "backend-1"
         url: "http://localhost:8081"
@@ -72,10 +77,10 @@ load_balancer:
         max_conns: 100
 
       - name: "backend-3"
-        url: "http://10.0.0.5:8080"
+        url: "http://localhost:8083"
         # health_url omitted -> will be computed as "<url>/health"
-        weight: 2
-        max_conns: 200
+        weight: 1
+        max_conns: 100
 
 rate_limiter:
   # Type of rate limiting to use
@@ -83,7 +88,7 @@ rate_limiter:
   type: "per-ip"
 
   # Requests per second limit
-  limit: 100
+  limit: 500
 
   # List of IPs to trust for X-Forwarded-For headers
   # If client IP is in this list, use the X-Forwarded-For value instead
@@ -94,6 +99,61 @@ rate_limiter:
     # - "10.0.0.0/8"
 
 # Configuration Notes and Best Practices:
+#
+# Testing with Load Generation Scripts:
+#   The ./scripts/test.sh script provides an integrated testing environment.
+#   
+#   Usage:
+#     - Full test suite:  ./scripts/test.sh full
+#     - Backends only:    ./scripts/test.sh backends-only
+#     - Proxy only:       ./scripts/test.sh proxy-only
+#     - Load test only:   ./scripts/test.sh load-test
+#     - View logs:        ./scripts/test.sh logs
+#   
+#   Environment variables to customize:
+#     export TEST_DURATION=60s    # How long to run the load test
+#     export TEST_CLIENTS=10      # Number of concurrent clients
+#     export TEST_RPS=100         # Requests per second per client
+#     export NUM_BACKENDS=3       # Number of dummy backends to start
+#
+#   Example:
+#     TEST_DURATION=120s TEST_CLIENTS=20 TEST_RPS=50 ./scripts/test.sh full
+#
+# Dummy Server Configuration:
+#   Dummy backend servers are started on ports 8081, 8082, 8083 by default.
+#   Each dummy server provides these endpoints:
+#     - GET /health           - Health check endpoint
+#     - GET /                 - Echo request details
+#   
+#   Each server can be customized with command line flags:
+#     -port <number>          - Server port
+#     -name <string>          - Server name (for identification)
+#     -latency <ms>           - Response latency in milliseconds
+#     -error-rate <0.0-1.0>   - Fraction of requests that fail
+#     -healthy-delay <dur>    - Delay before marking as healthy
+#
+#   Example:
+#     go run ./scripts/cmd/dummy-server/main.go -port 8081 -name backend-1 -latency 20
+#
+# Load Generator Configuration:
+#   The load generator makes HTTP requests with randomized headers to test
+#   the proxy's ability to handle various client patterns.
+#   
+#   Features:
+#     - Random User-Agent headers
+#     - Random Accept headers (JSON, HTML, etc.)
+#     - Random Cache-Control directives
+#     - Random X-Forwarded-For and X-Real-IP headers
+#     - Random Authorization headers
+#     - Request IDs and custom headers
+#   
+#   Usage:
+#     go run ./scripts/cmd/loadgen/main.go \
+#       -url=http://localhost:8080 \
+#       -clients=10 \
+#       -rps=100 \
+#       -duration=60s \
+#       -verbose=false
 #
 # Proxy Configuration:
 #   - host: Bind address ("0.0.0.0" for all interfaces, "127.0.0.1" for localhost only)
