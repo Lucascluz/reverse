@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reverxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reverxy
+  template:
+    metadata:
+      labels:
+        app: reverxy
+    spec:
+      containers:
+      - name: reverxy
+        image: reverxy
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: CONFIG_PATH
+          value: /etc/config/config.yaml
+        ports:
+        - name: proxy
+          containerPort: 8080
+        - name: probe
+          containerPort: 8085
+        volumeMounts:
+        - name: config
+          mountPath: /etc/config
+          readOnly: true
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: probe
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: probe
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+      volumes:
+      - name: config
+        configMap:
+          name: reverxy-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reverxy
+spec:
+  selector:
+    app: reverxy
+  ports:
+  - name: proxy
+    port: 8080
+    targetPort: proxy
+  - name: probe
+    port: 8085
+    targetPort: probe

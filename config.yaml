@@ -84,11 +84,11 @@ load_balancer:
 
 rate_limiter:
   # Type of rate limiting to use
-  # Supported values: "per-ip" (default)
-  type: "per-ip"
+  # Supported values: "fixed-window" (default)
+  type: "fixed-window"
 
   # Requests per second limit
-  limit: 500
+  limit: 200
 
   # List of IPs to trust for X-Forwarded-For headers
   # If client IP is in this list, use the X-Forwarded-For value instead

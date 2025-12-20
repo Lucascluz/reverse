@@ -1,0 +1,65 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+*.iml
+
+# Build artifacts
+bin/
+dist/
+*.o
+*.a
+*.so
+*.dylib
+
+# Test files
+*_test.go
+*.test
+coverage.out
+*.prof
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+.cache
+
+# Documentation
+*.md
+docs/
+
+# Kubernetes and Docker files (we don't need these in build context)
+k8s/
+docker-compose*.yml
+Dockerfile
+Dockerfile.backend
+
+# Environment files
+.env
+.env.local
+
+# RFC files
+rfc*.txt
+
+# Node modules (if any)
+node_modules/
+
+# GitHub files
+.github/
+
+# Other
+TODO.md
+CONTRIBUTING.md
+TRADE-OFFS.md
+REFERENCE.md

@@ -10,3 +10,10 @@ TODO.md
 TRADE-OFS.md
 rfc7234.txt
 rfc7231.txt
+
+# Local config
+/.env.local
+/config.yaml
+
+# Scripts
+/scripts/

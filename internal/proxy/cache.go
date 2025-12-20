@@ -164,7 +164,7 @@ func (p *Proxy) tryCachingResponse(r *http.Request, statusCode int, headers http
 		return false, fmt.Sprintf("Cache error: %s", err.Error())
 	}
 
-	return true, "Stored"
+	return true, "STORED"
 }
 
 func (p *Proxy) tryServingCachedResponse(r *http.Request) (result bool, resp *CachedResponse) {

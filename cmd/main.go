@@ -61,7 +61,13 @@ func initialize(logger *log.Logger) (*app, error) {
 	logger.Println("initializing application...")
 
 	// Load configuration
-	cfg, err := config.Load("./config.yaml")
+
+	configPath := os.Getenv("CONFIG_PATH")
+	if configPath == "" {
+		configPath = "/etc/config/config.yaml"
+	}
+
+	cfg, err := config.Load(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
