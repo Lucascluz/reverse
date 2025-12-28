@@ -3,7 +3,7 @@ package observability
 import (
 	"fmt"
 
-	"github.com/Lucascluz/reverse/internal/config"
+	"github.com/Lucascluz/reverxy/internal/config"
 )
 
 // Observability is a setup hub that manages all observability components

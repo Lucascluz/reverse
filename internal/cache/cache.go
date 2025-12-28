@@ -3,7 +3,7 @@ package cache
 import (
 	"time"
 
-	"github.com/Lucascluz/reverse/internal/config"
+	"github.com/Lucascluz/reverxy/internal/config"
 )
 
 type Cache interface {

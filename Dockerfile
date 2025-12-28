@@ -10,7 +10,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 # Copy source code
-COPY . .
+COPY ./cmd ./interval
 
 # Build the binary
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o /build/reverxy ./cmd/main.go
@@ -29,8 +29,6 @@ RUN addgroup -S appuser && adduser -S appuser -G appuser
 # Copy the binary from the build stage
 COPY --from=builder /build/reverxy /app/reverxy
 
-# Copy config file
-COPY config.yaml /etc/config/config.yaml
 
 # Create logs directory
 RUN mkdir -p /app/logs && chown -R appuser:appuser /app
@@ -46,4 +44,4 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=3 \
   CMD wget --quiet --tries=1 --spider http://localhost:8085/healthz || exit 1
 
 # Run the application
-ENTRYPOINT ["/app/reverxy"]
+ENTRYPOINT ["/app/bin/reverxy"]

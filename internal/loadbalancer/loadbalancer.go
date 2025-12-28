@@ -5,17 +5,17 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/Lucascluz/reverse/internal/config"
-	"github.com/Lucascluz/reverse/internal/loadbalancer/balancer"
-	"github.com/Lucascluz/reverse/internal/loadbalancer/pool"
+	"github.com/Lucascluz/reverxy/internal/config"
+	"github.com/Lucascluz/reverxy/internal/loadbalancer/balancer"
+	"github.com/Lucascluz/reverxy/internal/loadbalancer/pool"
 )
 
 type LoadBalancer struct {
-	balancer Balancer
-	pool     *pool.Pool
+	mu   sync.Mutex
+	pool *pool.Pool
 
-	ready atomic.Bool
-	mu    sync.Mutex
+	balancer Balancer
+	ready    atomic.Bool
 }
 
 type Balancer interface {
@@ -23,20 +23,17 @@ type Balancer interface {
 }
 
 func NewLoadBalancer(cfg *config.LoadBalancerConfig) *LoadBalancer {
-	lb := &LoadBalancer{
-		ready: atomic.Bool{},
-	}
-
 	// Create the pool with a callback that updates our readiness
-	lb.pool = pool.NewPool(&cfg.Pool)
+	pool := pool.NewPool(&cfg.Pool)
 
 	// Create the balancing strategy
-	lb.balancer = newBalancingStrategy(lb.pool.Backends(), cfg.Type)
+	balancer := newBalancingStrategy(pool.Backends(), cfg.Type)
 
-	// Set initial readiness
-	lb.ready.Store(lb.pool.IsReady())
-
-	return lb
+	return &LoadBalancer{
+		pool:   pool,
+		balancer: balancer,
+		ready: atomic.Bool{},
+	}
 }
 
 func (lb *LoadBalancer) Next() (*pool.Backend, error) {
@@ -46,7 +43,7 @@ func (lb *LoadBalancer) Next() (*pool.Backend, error) {
 	backends := lb.pool.Backends()
 	maxTries := len(backends)
 
-	for _ = range maxTries {
+	for range maxTries {
 		backend := lb.balancer.Next()
 
 		if backend == nil || !backend.IsHealthy() {
@@ -57,9 +54,11 @@ func (lb *LoadBalancer) Next() (*pool.Backend, error) {
 			continue
 		}
 
+		lb.SetReady(true)
 		return backend, nil
 	}
 
+	lb.SetReady(false)
 	return nil, fmt.Errorf("no healthy backends available")
 }
 

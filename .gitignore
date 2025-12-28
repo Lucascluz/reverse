@@ -15,5 +15,5 @@ rfc7231.txt
 /.env.local
 /config.yaml
 
-# Scripts
-/scripts/
+# bin
+reverxy

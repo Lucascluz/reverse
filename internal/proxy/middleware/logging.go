@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Lucascluz/reverse/internal/observability"
+	"github.com/Lucascluz/reverxy/internal/observability"
 )
 
 // Logging wraps an HTTP handler with request/response logging

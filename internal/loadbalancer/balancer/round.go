@@ -3,7 +3,7 @@ package balancer
 import (
 	"sync/atomic"
 
-	"github.com/Lucascluz/reverse/internal/loadbalancer/pool"
+	"github.com/Lucascluz/reverxy/internal/loadbalancer/pool"
 )
 
 type roundRobin struct {

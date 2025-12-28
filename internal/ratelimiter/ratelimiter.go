@@ -3,8 +3,8 @@ package ratelimiter
 import (
 	"time"
 
-	"github.com/Lucascluz/reverse/internal/config"
-	"github.com/Lucascluz/reverse/internal/ratelimiter/limiter"
+	"github.com/Lucascluz/reverxy/internal/config"
+	"github.com/Lucascluz/reverxy/internal/ratelimiter/limiter"
 )
 
 type Limiter interface {

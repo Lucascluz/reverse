@@ -4,14 +4,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Lucascluz/reverse/internal/config"
+	"github.com/Lucascluz/reverxy/internal/config"
 )
 
 type inMemoryCache struct {
+	mu     sync.RWMutex
 	store  map[string]*entry
+	
 	ticker *time.Ticker
 	stop   chan bool
-	mu     sync.RWMutex
 }
 
 func NewInMemoryCache(cfg *config.CacheConfig) *inMemoryCache {

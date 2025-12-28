@@ -1,10 +1,10 @@
 package observability
 
 import (
-	"fmt"
 	"net/http"
-	"os"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type ReadyAware interface {
@@ -42,27 +42,29 @@ func (p *Probe) Handler() http.Handler {
 	mux := http.NewServeMux()
 
 	// Liveness check
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
 
-	// Readiness check
-	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+	// Readiness check - always return OK unless proxy is explicitly shutting down
+	// Readiness check - consult the provided ReadyAware component
+	// Return 200 when ReadyAware reports ready, 503 otherwise. This lets
+	// the probe reflect whether the load balancer has at least one healthy
+	// backend available.
+	mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
-
-		ready := p.ReadyAware.IsReady()
-		fmt.Fprintf(os.Stderr, "[Probe] /readyz check: ready=%v\n", ready)
-
-		if ready {
+		if p.ReadyAware != nil && p.ReadyAware.IsReady() {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("OK"))
-		} else {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte("NOT OK"))
+			return
 		}
+		w.WriteHeader(http.StatusServiceUnavailable)
+		w.Write([]byte("NOT_READY"))
 	})
+
+	mux.Handle("/metrics", promhttp.Handler())
 
 	return mux
 }

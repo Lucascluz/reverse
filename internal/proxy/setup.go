@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Lucascluz/reverse/internal/config"
-	"github.com/Lucascluz/reverse/internal/observability"
-	"github.com/Lucascluz/reverse/internal/proxy/middleware"
-	"github.com/Lucascluz/reverse/internal/ratelimiter"
+	"github.com/Lucascluz/reverxy/internal/config"
+	"github.com/Lucascluz/reverxy/internal/observability"
+	"github.com/Lucascluz/reverxy/internal/proxy/middleware"
+	"github.com/Lucascluz/reverxy/internal/ratelimiter"
 )
 
 // Setup encapsulates the complete proxy initialization

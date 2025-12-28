@@ -3,13 +3,12 @@ package pool
 import (
 	"sync"
 
-	"github.com/Lucascluz/reverse/internal/config"
+	"github.com/Lucascluz/reverxy/internal/config"
 )
 
 type Pool struct {
-	backends []*Backend
-
 	mu sync.RWMutex
+	backends []*Backend
 }
 
 func NewPool(cfg *config.PoolConfig) *Pool {
@@ -32,12 +31,18 @@ func (p *Pool) IsReady() bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
+	// Pool is ready if at least one backend is healthy
+	// This prevents the proxy from going not-ready if a single backend fails
+	if len(p.backends) == 0 {
+		return false
+	}
+
 	for _, backend := range p.backends {
-		if !backend.IsHealthy() {
-			return false
+		if backend.IsHealthy() {
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 // Backends returns a copy of the backends slice

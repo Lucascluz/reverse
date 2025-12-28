@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/Lucascluz/reverse/internal/config"
+	"github.com/Lucascluz/reverxy/internal/config"
 )
 
 type HealthAware interface {
@@ -73,7 +73,7 @@ func NewHealthChecker(cfg *config.HealthCheckerConfig) *HealthChecker {
 
 func (hc *HealthChecker) Start(backends []HealthAware, updateReady func()) {
 
-	fmt.Fprintf(os.Stderr, "[HealthChecker] Starting health checks for %d backends\n", len(backends))
+	fmt.Fprintf(os.Stderr, "[HEALTH] Starting checks for %d backends\n", len(backends))
 
 	// Run initial health checks immediately before waiting for ticker
 	doHealthChecks := func() {
@@ -135,12 +135,12 @@ func healthCheck(client *http.Client, backend HealthAware) {
 	success := (err == nil && resp.StatusCode >= 200 && resp.StatusCode < 300)
 
 	if success {
-		fmt.Fprintf(os.Stderr, "[HealthCheck] %s is HEALTHY (status %d)\n", backend.Name(), resp.StatusCode)
+		fmt.Fprintf(os.Stderr, "[HEALTH] %s is HEALTHY (status %d)\n", backend.Name(), resp.StatusCode)
 	} else {
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "[HealthCheck] %s FAILED: %v\n", backend.Name(), err)
+			fmt.Fprintf(os.Stderr, "[HEALTH] %s FAILED: %v\n", backend.Name(), err)
 		} else {
-			fmt.Fprintf(os.Stderr, "[HealthCheck] %s FAILED: status %d\n", backend.Name(), resp.StatusCode)
+			fmt.Fprintf(os.Stderr, "[HEALTH] %s FAILED: status %d\n", backend.Name(), resp.StatusCode)
 		}
 	}
 

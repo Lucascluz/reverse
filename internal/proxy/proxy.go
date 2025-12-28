@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Lucascluz/reverse/internal/cache"
-	"github.com/Lucascluz/reverse/internal/config"
-	"github.com/Lucascluz/reverse/internal/loadbalancer"
+	"github.com/Lucascluz/reverxy/internal/cache"
+	"github.com/Lucascluz/reverxy/internal/config"
+	"github.com/Lucascluz/reverxy/internal/loadbalancer"
 )
 
 type Proxy struct {

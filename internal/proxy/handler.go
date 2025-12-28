@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Lucascluz/reverse/internal/proxy/middleware"
+	"github.com/Lucascluz/reverxy/internal/proxy/middleware"
 )
 
 // Implement http.Handler interface directly
@@ -19,6 +19,10 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// Write response body to client
 			w.WriteHeader(cached.StatusCode)
 			w.Write(cached.Body)
+			// Notify middleware of cache decision
+			if cw, ok := w.(middleware.CacheDecisionWriter); ok {
+				cw.SetCacheDecision("HIT", "", r.RequestURI)
+			}
 			return
 		}
 	}
@@ -76,9 +80,9 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// Notify middleware of cache decision
 		if cw, ok := w.(middleware.CacheDecisionWriter); ok {
 			if cached {
-				cw.SetCacheDecision("CACHED", reason, r.RequestURI)
+				cw.SetCacheDecision("STORE", reason, r.RequestURI)
 			} else {
-				cw.SetCacheDecision("NOT_CACHED", reason, r.RequestURI)
+				cw.SetCacheDecision("MISS", reason, r.RequestURI)
 			}
 		}
 	}

@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Lucascluz/reverse/internal/ratelimiter"
+	"github.com/Lucascluz/reverxy/internal/ratelimiter"
 )
 
 func RateLimiting(l ratelimiter.Limiter, e *ratelimiter.Extractor, next http.Handler) http.Handler {

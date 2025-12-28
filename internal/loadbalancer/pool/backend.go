@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Lucascluz/reverse/internal/config"
+	"github.com/Lucascluz/reverxy/internal/config"
 )
 
 type Backend struct {
@@ -14,15 +14,14 @@ type Backend struct {
 	weight    int
 	maxConns  int
 
+	mu sync.RWMutex
 	healthy         bool
-	lastCheck       time.Time
 	failureCount    int
-	backoffTime     time.Duration
 	activeConns     int
 	totalRequests   int
+	lastCheck       time.Time
+	backoffTime     time.Duration
 	avgResponseTime time.Duration
-
-	mu sync.RWMutex
 }
 
 func NewBackend(cfg config.BackendConfig) *Backend {

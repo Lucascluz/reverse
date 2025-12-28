@@ -11,14 +11,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Lucascluz/reverse/internal/config"
-	"github.com/Lucascluz/reverse/internal/observability"
-	"github.com/Lucascluz/reverse/internal/proxy"
+	"github.com/Lucascluz/reverxy/internal/config"
+	"github.com/Lucascluz/reverxy/internal/observability"
+	"github.com/Lucascluz/reverxy/internal/proxy"
 )
 
 const (
 	shutdownTimeout = 10 * time.Second
-	logPrefix       = "[reverse]"
+	logPrefix       = "[REVERXY]"
 )
 
 func main() {
@@ -60,8 +60,7 @@ type app struct {
 func initialize(logger *log.Logger) (*app, error) {
 	logger.Println("initializing application...")
 
-	// Load configuration
-
+	// Load configuration path from environment variable (Kubernetes style)
 	configPath := os.Getenv("CONFIG_PATH")
 	if configPath == "" {
 		configPath = "/etc/config/config.yaml"
