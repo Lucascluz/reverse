@@ -33,8 +33,12 @@ const (
 
 	// Rate limiter defaults
 	DefaultRateLimiterType = "fixed-window"
-	DefaultRateLimit       = 5 // Requests per second
+	DefaultRateLimit       = 5  // Requests per second
+	DefaultCapacity        = 50 // Token bucket capacity
+	DefaultRefillRate      = 5  // Tokens per second
 )
+
+var DefaultTrustedProxies = []string{"", ""}
 
 func (c *Config) applyDefaults() error {
 
@@ -130,8 +134,20 @@ func (c *Config) applyDefaults() error {
 		c.RateLimiter.Type = DefaultRateLimiterType
 	}
 
+	if c.RateLimiter.TrustedProxies == nil {
+		c.RateLimiter.TrustedProxies = DefaultTrustedProxies
+	}
+
 	if c.RateLimiter.Limit == 0 {
 		c.RateLimiter.Limit = DefaultRateLimit
+	}
+
+	if c.RateLimiter.Capacity == 0 {
+		c.RateLimiter.Capacity = DefaultCapacity
+	}
+
+	if c.RateLimiter.RefillRate == 0 {
+		c.RateLimiter.RefillRate = DefaultRefillRate
 	}
 
 	return nil

@@ -8,7 +8,7 @@ import (
 	"github.com/Lucascluz/reverxy/internal/config"
 )
 
-type Fixed struct {
+type FixedWindow struct {
 	limit    int
 	counter  atomic.Int32
 	lastTick time.Time
@@ -17,8 +17,8 @@ type Fixed struct {
 	mu       sync.Mutex
 }
 
-func NewFixed(cfg config.RateLimiterConfig) *Fixed {
-	l := &Fixed{
+func NewFixedWindow(cfg config.RateLimiterConfig) *FixedWindow {
+	l := &FixedWindow{
 		limit:   cfg.Limit,
 		counter: atomic.Int32{},
 		ticker:  time.NewTicker(time.Second),
@@ -30,7 +30,7 @@ func NewFixed(cfg config.RateLimiterConfig) *Fixed {
 	return l
 }
 
-func (f *Fixed) Start() {
+func (f *FixedWindow) Start() {
 	go func() {
 		f.mu.Lock()
 		defer f.mu.Unlock()
@@ -42,12 +42,12 @@ func (f *Fixed) Start() {
 	}()
 }
 
-func (f *Fixed) Stop() {
+func (f *FixedWindow) Stop() {
 	close(f.stop)
 	f.ticker.Stop()
 }
 
-func (f *Fixed) Allow(key string) (bool, time.Duration) {
+func (f *FixedWindow) Allow(key string) (bool, time.Duration) {
 	if f.counter.Load() >= int32(f.limit) {
 		return false, time.Until(f.lastTick.Add(time.Second))
 	}

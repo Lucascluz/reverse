@@ -17,7 +17,9 @@ type Limiter interface {
 func New(cfg config.RateLimiterConfig) Limiter {
 	switch cfg.Type {
 	case "fixed-window":
-		return limiter.NewFixed(cfg)
+		return limiter.NewFixedWindow(cfg)
+	case "token-bucket":
+		return limiter.NewTokenBucket(cfg)
 	}
-	return limiter.NewFixed(cfg)
+	return limiter.NewFixedWindow(cfg)
 }

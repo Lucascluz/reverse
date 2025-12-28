@@ -50,6 +50,8 @@ type HealthCheckerConfig struct {
 
 type RateLimiterConfig struct {
 	Type           string   `yaml:"type"`
-	Limit          int      `yaml:"limit"`
 	TrustedProxies []string `yaml:"trusted_proxies"`
+	Limit          int      `yaml:"limit"`
+	Capacity       int      `yaml:"capacity"`
+	RefillRate     int      `yaml:"refill_rate"`
 }
