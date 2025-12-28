@@ -14,7 +14,7 @@ type Backend struct {
 	weight    int
 	maxConns  int
 
-	mu sync.RWMutex
+	mu              sync.RWMutex
 	healthy         bool
 	failureCount    int
 	activeConns     int
@@ -53,6 +53,10 @@ func (b *Backend) Url() string {
 
 func (b *Backend) HealthUrl() string {
 	return b.healthUrl
+}
+
+func (b *Backend) Weight() int {
+	return b.weight
 }
 
 func (b *Backend) IsHealthy() bool {
@@ -112,6 +116,13 @@ func (b *Backend) IsAtCapacity() bool {
 	return b.activeConns >= b.maxConns
 }
 
+// ActiveConns returns current active connection count
+func (b *Backend) ActiveConns() int {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	return b.activeConns
+}
+
 // IncrementConnections increments the active connection count
 func (b *Backend) IncrementConnections() {
 	b.mu.Lock()
@@ -127,11 +138,4 @@ func (b *Backend) DecrementConnections() {
 	if b.activeConns > 0 {
 		b.activeConns--
 	}
-}
-
-// ActiveConns returns current active connection count
-func (b *Backend) ActiveConns() int {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-	return b.activeConns
 }

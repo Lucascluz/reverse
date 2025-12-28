@@ -73,7 +73,7 @@ func NewHealthChecker(cfg *config.HealthCheckerConfig) *HealthChecker {
 
 func (hc *HealthChecker) Start(backends []HealthAware, updateReady func()) {
 
-	fmt.Fprintf(os.Stderr, "[HEALTH] Starting checks for %d backends\n", len(backends))
+	fmt.Fprintf(os.Stderr, "\n[HEALTH] Starting checks for %d backends\n\n", len(backends))
 
 	// Run initial health checks immediately before waiting for ticker
 	doHealthChecks := func() {

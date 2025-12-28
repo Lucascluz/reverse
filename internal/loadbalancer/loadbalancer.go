@@ -81,6 +81,10 @@ func newBalancingStrategy(backends []*pool.Backend, balancerType string) Balance
 	switch balancerType {
 	case "round-robin":
 		return balancer.NewRoundRobin(backends)
+	case "least-connections":
+		return balancer.NewLeastConns(backends)
+	case "random-weight":
+		return balancer.NewRandomWeight(backends)
 	default:
 		return balancer.NewRoundRobin(backends)
 	}
